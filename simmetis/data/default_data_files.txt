@@ -1,0 +1,41 @@
+Config files
+------------
+default.config
+
+Detector files
+--------------
+FPA_chip_layout.dat
+FPA_nirspec_pca0.fits
+FPA_noise.fits
+
+Source properties
+-----------------
+EC_all_stars.csv
+IMF_1E4.dat
+IMF_1E5.dat
+
+PSF files
+---------
+PSF_POPPY.fits
+
+Emission curves
+---------------
+EC_pickles.fits
+skytable.fits
+
+Transmission curves
+-------------------
+TC_blank.dat
+TC_detector_H4RG.dat
+TC_filter_B.dat
+TC_filter_H.dat
+TC_filter_I.dat
+TC_filter_J.dat
+TC_filter_K.dat
+TC_filter_Ks.dat
+TC_filter_R.dat
+TC_filter_V.dat
+TC_filter_Y.dat
+TC_filter_z.dat
+TC_mirror_mgf2agal.dat
+TC_window.dat

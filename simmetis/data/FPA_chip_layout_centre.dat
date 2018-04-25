@@ -1,0 +1,9 @@
+## Created from E-MCD-FPA-572089EB.uda
+## Changes:
+##     2017-08-12: id changed to conform with spectroscopy report
+##     2017-09-17: changed from arcsec to mm, new format
+##                 extracted central chip
+## MICADO H4RG-15 FPA
+   id    x_cen   y_cen    xhw    yhw  x_len   y_len  pixsize  angle    gain
+#           mm      mm     mm     mm  pixel   pixel       mm    deg  e-/ADU
+    5     0.00    0.00  30.72  30.72   4096    4096    0.015    0.0     1.0
