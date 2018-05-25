@@ -4,4 +4,4 @@
 ## METIS AQUARIUS-30 FPA
    id   x_cen  y_cen     xhw     yhw  x_len  y_len  pixsize  angle    gain
 #          mm     mm      mm      mm    pix    pix       mm    deg  e-/ADU
-    1    0.00   0.00   15.36   15.36   1024   1024    0.030    0.0     15.0
+    1    0.00   0.00   15.36   15.36   1024   1024    0.030    0.0     1.0

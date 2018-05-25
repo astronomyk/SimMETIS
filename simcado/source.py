@@ -2499,7 +2499,7 @@ def flat_spectrum(mag, filter_name="Ks", return_ec=False):
         [ph/s/m2/arcsec] The spectrum scaled to the specified magnitude
 
     """
-    lam = np.arange(0.3, 5.51, 0.01)
+    lam = np.arange(3.0, 13.2, 0.01)
     spec = np.ones(len(lam))
 
     if return_ec:     # TODO: mag_per_arcsec undefined? (OC)
@@ -2538,7 +2538,7 @@ def flat_spectrum_sb(mag_per_arcsec, filter_name="Ks", pix_res=0.004,
         [ph/s/m2/arcsec] The spectrum scaled to the specified magnitude
 
     """
-    lam = np.arange(0.3, 5.51, 0.01)
+    lam = np.arange(3.0, 13.2, 0.01)
     spec = np.ones(len(lam))
 
     if return_ec:
