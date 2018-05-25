@@ -1488,13 +1488,18 @@ def photons_to_mag(filter_name, photons=1):
 
 
     
-def _get_vega_curve(filename=None):
+def _get_refstar_curve(filename=None,mag=0):
     """
     """
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
     data = ioascii.read("sirius_downsampled.txt")
     
-    lam, spec = data[data.colnames[0]], data[data.colnames[1]]
+    mag_scale_factor = 10**(-mag/2.5)
+    
+    ##
+    ## this function is expected to return the number of photons of a 0th mag star
+    ## for a star brighter than 0th mag, the number of photons needs to be reduced to match a 0th mag star
+    lam, spec = data[data.colnames[0]], data[data.colnames[1]]/mag_scale_factor
     return lam, spec
     
     
@@ -1534,7 +1539,10 @@ def zero_magnitude_photon_flux(filter_name):
         vval = vraw[vraw.colnames[1]]
 
     #lam, vega = _scale_pickles_to_photons("A0V", mag=-0.58)        
-    lam, vega = _get_vega_curve()
+    ##
+    ## we refer here (SimMETIS) to the Sirius spectrum (see _get_refstar_curve above)
+    ## and give the Vega magnitude of Sirius in L/M band.
+    lam, vega = _get_refstar_curve(mag=-1.39)
     filt = np.interp(lam, vlam, vval)
 
     n_ph = np.sum(vega*filt)
