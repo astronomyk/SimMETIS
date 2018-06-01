@@ -18,3 +18,8 @@ MANIFEST
 
 # emacs backup files
 *~
+
+# log files
+simcado.log
+.ipynb_checkpoints/
+Untitled.ipynb
