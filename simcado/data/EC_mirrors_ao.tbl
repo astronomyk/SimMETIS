@@ -1,8 +1,0 @@
-#Mirror     Outer   Inner   Temp    Coating
-M6          1.1     0.      0.      TC_mirror_mgf2agal.dat
-M7          0.7     0.      0.      TC_mirror_gold.dat
-M8          0.85    0.      0.      TC_mirror_gold.dat
-M9          0.75    0.      0.      TC_mirror_gold.dat
-Dichr.      0.6     0.      0.      TC_dichroic.dat
-M10         0.6     0.      0.      TC_mirror_gold.dat
-M11         0.8     0.      0.      TC_mirror_gold.dat
