@@ -1492,7 +1492,7 @@ def _get_refstar_curve(filename=None,mag=0):
     """
     """
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
-    data = ioascii.read("sirius_downsampled.txt")
+    data = ioascii.read("../data/sirius_downsampled.txt")
     
     mag_scale_factor = 10**(-mag/2.5)
     
