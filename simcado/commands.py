@@ -399,24 +399,42 @@ class UserCommands(object):
         Checks for a file in the directorys: "./", <pkg_dir>, <pkg_dir>/data
         """
 
+        # TODO: search_path should be defined in class
+        search_path = ['./',
+                       __pkg_dir__,
+                       os.path.join(__pkg_dir__, "data")]
+
         for key in self.cmds:
             if key == "OBS_OUTPUT_DIR":       # need not exist
                 continue
-            fname = self.cmds[key]
-            if isinstance(fname, str) and \
-               "." in fname and \
-               len(fname.split(".")[-1]) > 1:
-                if not os.path.exists(fname):
-                    fname = os.path.join(__pkg_dir__,
-                                                    os.path.split(fname)[-1])
-                if not os.path.exists(fname):
-                    fname = os.path.join(__pkg_dir__, "data", \
-                                                    os.path.split(fname)[-1])
-                if not os.path.exists(fname):
-                    fname = self.cmds[key]
-                    warnings.warn("Keyword "+key+" path doesn't exist: "+fname)
 
-                self.cmds[key] = fname
+            keyval = self.cmds[key]
+
+            # not a string: not a filename
+            if not isinstance(keyval, str):
+                continue   # not a string
+
+            # absolute path: nothing to be done
+            if os.path.isabs(keyval):
+                if not os.path.exists(keyval):
+                    warnings.warn("Keyword "+key+" path doesn't exist: "
+                                  + keyval)
+                continue
+
+            # if string has no extension, assume it's not a file name
+            if "." in keyval and len(keyval.split(".")[-1]) > 1:
+
+                # try to find the file in a search path
+                trynames = [os.path.join(trydir, keyval)
+                            for trydir in search_path]
+
+                for fname in trynames:
+                    if os.path.exists(fname):
+                        self.cmds[key] = fname
+                        break
+                else:  # no file found
+                    warnings.warn("Keyword "+key+" path doesn't exist: "
+                                  + keyval)
 
 
     def _default_data(self):
@@ -485,6 +503,7 @@ class UserCommands(object):
         """
 
         if self.cmds["SCOPE_MIRROR_LIST"] is not None:
+            print(self.cmds["SCOPE_MIRROR_LIST"])
             self.mirrors_telescope = ioascii.read(self.cmds["SCOPE_MIRROR_LIST"])
         else:
             raise ValueError("SCOPE_MIRROR_LIST = " + \
