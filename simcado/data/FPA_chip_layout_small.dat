@@ -1,5 +1,0 @@
-## Changes:
-##     2017-09-17: changed from arcsec to mm, new format
-   id    x_cen   y_cen   xhw   yhw  x_len   y_len  pixsize  angle    gain
-#           mm      mm    mm    mm  pixel   pixel       mm    deg  e-/ADU
-    1     0.00    0.00  7.68  7.68   1024    1024    0.015    0.0     1.0

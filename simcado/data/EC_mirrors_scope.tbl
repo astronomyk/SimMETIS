@@ -1,6 +1,0 @@
-#Mirror     Outer   Inner   Temp   Coating
-M1          37.3    11.1    0.     TC_mirror_mgf2agal.dat
-M2          4.2     0.545   0.     TC_mirror_mgf2agal.dat
-M3          3.8     0.14    0.     TC_mirror_mgf2agal.dat
-M4          2.4     0.      0.     TC_mirror_aluminium.dat
-M5          2.4     0.      0.     TC_mirror_mgf2agal.dat
