@@ -1,0 +1,8 @@
+## Discussion with Roy van Boekel
+## Kieran 2018.04.26
+## Changes:
+##     
+## METIS H2RG-18 FPA
+   id  x_cen  y_cen     xhw     yhw  x_len  y_len  pixsize  angle    gain
+#         mm     mm      mm      mm    pix    pix       mm    deg  e-/ADU
+    1      0      0  18.432  18.432   2048   2048    0.018    0.0     1.0

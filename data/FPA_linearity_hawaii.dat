@@ -1,0 +1,5 @@
+#real_flux  measured_flux
+#From Ingraham+ 2014 - Gemini Calibrations II for H2RG
+0       0
+1E5     1E5
+1E99    1E5
