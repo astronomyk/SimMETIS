@@ -503,7 +503,6 @@ class UserCommands(object):
         """
 
         if self.cmds["SCOPE_MIRROR_LIST"] is not None:
-            print(self.cmds["SCOPE_MIRROR_LIST"])
             self.mirrors_telescope = ioascii.read(self.cmds["SCOPE_MIRROR_LIST"])
         else:
             raise ValueError("SCOPE_MIRROR_LIST = " + \
