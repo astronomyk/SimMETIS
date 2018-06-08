@@ -401,6 +401,7 @@ class UserCommands(object):
 
         # TODO: search_path should be defined in class
         search_path = ['./',
+                       self.cmds['SIM_DATA_DIR'],
                        __pkg_dir__,
                        os.path.join(__pkg_dir__, "data")]
 
@@ -430,6 +431,9 @@ class UserCommands(object):
 
                 for fname in trynames:
                     if os.path.exists(fname):
+                        # strip leading ./
+                        while fname[:2] =='./':
+                            fname = fname[2:]
                         self.cmds[key] = fname
                         break
                 else:  # no file found
