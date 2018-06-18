@@ -1,5 +1,5 @@
 #Mirror     Outer   Inner   Angle  Temp    Coating
-M1          37.3    11.1    0.     9.      ../data/TC_mirror_total_emissivity.dat
+M1          38.0    11.1    0.     9.      ../data/TC_mirror_total_emissivity.dat
 #M2          4.2     0.545   0.     9.      TC_mirror_ICD_emissivity.dat
 #M3          3.8     0.14    0.     9.      TC_mirror_ICD_emissivity.dat
 #M4          2.4     0.      7.75   9.      TC_mirror_ICD_emissivity.dat
