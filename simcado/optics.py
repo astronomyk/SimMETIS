@@ -462,8 +462,14 @@ class OpticalTrain(object):
                 ################################################################
 
 
-                lam, val = sc.get_sky_spectrum(fname=self.cmds["ATMO_EC"],
-                                               airmass=self.cmds["ATMO_AIRMASS"])
+                self.ec_atmo = sc.get_sky_spectrum(fname=self.cmds["ATMO_EC"],
+                                               airmass=self.cmds["ATMO_AIRMASS"],
+                                               return_type="emission",
+                                               area=self.cmds.area,
+                                               pix_res=self.cmds.pix_res)
+                lam = self.ec_atmo.lam
+                val = self.ec_atmo.val
+
                 sky_mag = self.cmds["ATMO_BG_MAGNITUDE"]
                 if sky_mag is not None and isinstance(sky_mag, (float, int)):
                     lam, val = scale_spectrum_sb(lam=lam, spec=val,
@@ -472,11 +478,11 @@ class OpticalTrain(object):
                                                  pix_res=self.cmds.pix_res,
                                                  return_ec=False)
 
-                self.ec_atmo = sc.EmissionCurve(lam=lam, val=val,
-                                                pix_res=self.cmds.pix_res,
-                                                area=self.cmds.area,
-                                                units="ph/(s m2)",
-                                                airmass=self.cmds["ATMO_AIRMASS"])
+                    self.ec_atmo = sc.EmissionCurve(lam=lam, val=val,
+                                                 pix_res=self.cmds.pix_res,
+                                                 area=self.cmds.area,
+                                                 units="ph/(s m2)",
+                                                 airmass=self.cmds["ATMO_AIRMASS"])
             else:
                 ################## TODO ######################
                 # Generalise this to accept any TransmissionCurve object

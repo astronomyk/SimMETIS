@@ -1,0 +1,7 @@
+# METIS IMG-LM detector QE (Aquarius)
+# NOT A REAL DETECTOR QE (unfortunately)
+#
+# wavelength               QE 
+#   [micron]  [dimensionless] 
+   1.0033284        1
+  29.9005454        1

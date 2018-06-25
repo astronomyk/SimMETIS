@@ -645,7 +645,7 @@ def get_sky_spectrum(fname, airmass, return_type=None, **kwargs):
         Default is 1.0. Acceptable values are between 1.0 and 3.0
     return_type : str, optional
         ["transmission", "emission", None] Default is None. A TransmissionCurve
-        or EmissionCurve object will be returned if desired. If None two array
+        or EmissionCurve object will be returned if desired. If None two arrays
         are returned: (lam, val)
     **kwargs : optional
         kwargs are passed directly onto the TransmissionCurve or EmissionCurve
@@ -654,7 +654,7 @@ def get_sky_spectrum(fname, airmass, return_type=None, **kwargs):
     Returns
     -------
     TransmissionCurve or EmissionCurve or (lam, val)
-        Be default lam is in [um] and val [ph/s/m2/um/arcsec2] if val is an
+        By default lam is in [um] and val [ph/s/m2/um/arcsec2] if val is an
         emission spectrum
 
     Notes
