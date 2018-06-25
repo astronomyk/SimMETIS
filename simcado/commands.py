@@ -44,8 +44,6 @@ By default ``UserCommands`` contains the parameters needed to generate the MICAD
 optical train:
 
     >>> my_cmds = simcado.UserCommands()
-    >>> my_cmds["SCOPE_NUM_MIRRORS"]
-    5
 
 To list the keywords that are available:
 
@@ -194,15 +192,6 @@ class UserCommands(object):
 
         >>> import simcado
         >>> my_cmds = simcado.UserCommands()
-        >>> my_cmds["SCOPE_NUM_MIRRORS"]
-        5
-
-
-    ``UserCommands`` supports indexing like a dictionary object.
-
-        >>> my_cmds["SCOPE_NUM_MIRRORS"] = 8
-        >>> my_cmds["SCOPE_NUM_MIRRORS"]
-        8
 
 
     To list the keywords that are available:
@@ -573,10 +562,6 @@ class UserCommands(object):
                                       self.lam_bin_edges[:-1])
 
         self.exptime = self.cmds["OBS_EXPTIME"]
-
-        self.cmds["SIM_N_MIRRORS"] = self.cmds["SCOPE_NUM_MIRRORS"] + \
-                                     self.cmds["INST_NUM_MIRRORS"] + \
-                                     self.cmds["INST_NUM_AO_MIRRORS"]
 
         self.cmds["ATMO_AIRMASS"] = 1. / np.cos(self.cmds["OBS_ZENITH_DIST"] / 57.3)
 

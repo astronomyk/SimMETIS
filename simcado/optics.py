@@ -33,6 +33,8 @@ from .source import flat_spectrum_sb, scale_spectrum_sb
 from .commands import UserCommands
 from .utils import __pkg_dir__
 
+import pdb
+
 __all__ = ["OpticalTrain", "get_filter_curve", "get_filter_set"]
 
 class OpticalTrain(object):
@@ -397,7 +399,10 @@ class OpticalTrain(object):
 
 
         if "Temp" in mirr_list.colnames:
-            self.cmds["SCOPE_TEMP"] = mirr_list["Temp"][0]
+        	##
+        	## KL/LB 25 June: manually adding SCOPE_TEMP key to user commands object 
+        	##                since we have taken it out of the config files
+            self.cmds.cmds["SCOPE_TEMP"] = mirr_list["Temp"][0]
         # Make the transmission curve for the blackbody photons from the mirror
         self.tc_mirror = self._gen_master_tc(preset="mirror")
         self.ec_mirror = sc.BlackbodyCurve(lam    =self.tc_mirror.lam,
@@ -530,8 +535,8 @@ class OpticalTrain(object):
                        ['INST_SURFACE_FACTOR'] + \
                        ['FPA_QE']
 
-                ao = ['INST_MIRROR_AO_TC'] + ['SCOPE_M1_TC'] * (int(self.cmds['SCOPE_NUM_MIRRORS']) - 1)
-
+                ao = ['INST_MIRROR_AO_TC'] + ['SCOPE_M1_TC'] * (len(self.cmds.mirrors_telescope) - 1)
+				
                 if preset == "ao":
                     tc_keywords = base
                 elif preset == "mirror":
@@ -574,6 +579,9 @@ class OpticalTrain(object):
                                   min_step=self.cmds["SIM_SPEC_MIN_STEP"])
         for key in tc_keywords:
             tc_master *= tc_dict[key]
+        
+        self.tc_keywords = tc_keywords
+        self.tc_dict = tc_dict
 
         return tc_master
 
