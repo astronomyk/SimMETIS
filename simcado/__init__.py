@@ -22,13 +22,14 @@ from . import source
 
 #from . import optics_utils
 #from . import defaults
-from . import simulation    
+from . import simulation
 
 from .version import version as __version__
 
 # import specific Classes from the modules to be accessible in the global
 # namespace
 from .utils     import __pkg_dir__
+from .utils     import bug_report
 from .detector  import Detector, Chip
 from .source    import Source
 from .optics    import OpticalTrain

@@ -589,3 +589,36 @@ def angle_in_arcseconds(distance, width):
     """
 
     return np.arctan2(width, distance)*u.rad.to(u.arcsec)
+
+
+def bug_report():
+    '''Get versions of dependencies for inclusion in bug report'''
+
+    try:
+        from importlib import import_module
+    except ImportError:
+        import_module = __import__
+
+    packages = ["simcado", "astropy", "numpy", "scipy", "poppy", "wget"]
+
+    # Check Python version
+    import sys
+    print("Python:\n", sys.version)
+    print("")
+
+    # Check package dependencies
+    for package_name in packages:
+        try:
+            pkg = import_module(package_name)
+            print(package_name, ": ", pkg.__version__)
+        except ImportError:
+            print(package_name, "could not be loaded.")
+
+    # Check operating system
+    import platform
+    osinfo = platform.uname()
+    print("")
+    print("Operating system: ", osinfo.system)
+    print("         Release: ", osinfo.release)
+    print("         Version: ", osinfo.version)
+    print("         Machine: ", osinfo.machine)
