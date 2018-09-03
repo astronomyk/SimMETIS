@@ -1243,11 +1243,11 @@ def _get_stellar_Mv(spec_type):
     else:
         return props["Mv"]
 
-        
 
 
 
-        
+
+
 
 def _get_pickles_curve(spec_type, cat=None, verbose=False):
     """
@@ -1487,22 +1487,25 @@ def photons_to_mag(filter_name, photons=1):
     return mag
 
 
-    
+
 def _get_refstar_curve(filename=None,mag=0):
     """
     """
+    ## TODO: Can we pre-select a star based on the instrument we're simulating?
+    ##       Do we need more flexibility in the path?
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
-    data = ioascii.read("../data/sirius_downsampled.txt")
-    
+    data = ioascii.read(os.path.join(__pkg_dir__, "../data",
+                                     "sirius_downsampled.txt"))
+
     mag_scale_factor = 10**(-mag/2.5)
-    
+
     ##
     ## this function is expected to return the number of photons of a 0th mag star
     ## for a star brighter than 0th mag, the number of photons needs to be reduced to match a 0th mag star
     lam, spec = data[data.colnames[0]], data[data.colnames[1]]/mag_scale_factor
     return lam, spec
-    
-    
+
+
 
 def zero_magnitude_photon_flux(filter_name):
     """
@@ -1521,7 +1524,7 @@ def zero_magnitude_photon_flux(filter_name):
     if isinstance(filter_name, TransmissionCurve):
         vlam = filter_name.lam
         vval = filter_name.val
-        
+
     else:
         if os.path.exists(filter_name):
             fname = filter_name
@@ -1538,7 +1541,7 @@ def zero_magnitude_photon_flux(filter_name):
         vlam = vraw[vraw.colnames[0]]
         vval = vraw[vraw.colnames[1]]
 
-    #lam, vega = _scale_pickles_to_photons("A0V", mag=-0.58)        
+    #lam, vega = _scale_pickles_to_photons("A0V", mag=-0.58)
     ##
     ## we refer here (SimMETIS) to the Sirius spectrum (see _get_refstar_curve above)
     ## and give the Vega magnitude of Sirius in L/M band.
