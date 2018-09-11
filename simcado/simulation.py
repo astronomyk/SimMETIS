@@ -96,12 +96,12 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
     print(fpa.layout)
     print("Creating", len(cmds.lam_bin_centers), "layer(s) per chip")
     print(len(fpa.chips), "chip(s) will be simulated")
-    
+
     src.apply_optical_train(opt_train, fpa, sub_pixel=sub_pixel)
 
     if filename is not None:
         if cmds["OBS_SAVE_ALL_FRAMES"] == "yes":
-            for n in cmds["OBS_NDIT"]:
+            for n in range(cmds["OBS_NDIT"]):
                 fname = filename.replace(".",str(n)+".")
                 hdu = fpa.read_out(filename=fname, to_disk=True, OBS_NDIT=1)
         else:
