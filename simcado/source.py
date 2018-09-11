@@ -3233,6 +3233,9 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
     angle : float
         [deg] Default = 30. Rotation anti-clockwise from the x-axis
 
+    n : float
+         Sersic index, default = 1 (exponential disk)
+
     width, height : int
         [arcsec] Dimensions of the image. Default: 512*plate_scale
 
@@ -3252,7 +3255,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     pixular_hlr = half_light_radius / plate_scale
 
-    params = {"n"           : n,
+    params = {"n"           : 1,
               "ellipticity" : 0.5,
               "angle"       : 30,
               "width"       : pixular_hlr,
