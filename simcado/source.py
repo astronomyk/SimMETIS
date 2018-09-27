@@ -1494,7 +1494,7 @@ def _get_refstar_curve(filename=None,mag=0):
     ## TODO: Can we pre-select a star based on the instrument we're simulating?
     ##       Do we need more flexibility in the path?
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
-    data = ioascii.read(os.path.join(__pkg_dir__, "../data",
+    data = ioascii.read(os.path.join(__pkg_dir__, "data",
                                      "sirius_downsampled.txt"))
 
     mag_scale_factor = 10**(-mag/2.5)
