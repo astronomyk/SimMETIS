@@ -1,6 +1,7 @@
-#   "N2"   from Roys wish filter list, March 2017
-# Wavelength(micron)  Throughput
- 10.119    0.
- 10.120    .850
- 13.130    .850
- 13.131    0.
+#  "N2" from Roys wish filter list, July 2018
+# Wavelength  Throughput
+#   [micron]  [dim-less]
+     10.0900      0.0000
+     10.1500      0.8500
+     13.1000      0.8500
+     13.1600      0.0000

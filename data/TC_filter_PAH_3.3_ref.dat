@@ -1,0 +1,7 @@
+#  "PAH 3.3 ref" from Roys wish filter list, July 2018
+# Wavelength  Throughput
+#   [micron]  [dim-less]
+      3.3200      0.0000
+      3.3300      0.6000
+      3.3800      0.6000
+      3.3900      0.0000
