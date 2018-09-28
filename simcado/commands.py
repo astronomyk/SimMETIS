@@ -563,8 +563,8 @@ class UserCommands(object):
 
         self.exptime = self.cmds["OBS_EXPTIME"]
 
+        # TODO clarify use of AIRMASS and ZENITH_DIST
         self.cmds["ATMO_AIRMASS"] = 1. / np.cos(self.cmds["OBS_ZENITH_DIST"] / 57.3)
-
 
         # replace 'none', 'None' with None
         self._convert_none()
