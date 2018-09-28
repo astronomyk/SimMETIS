@@ -1,4 +1,4 @@
-"""Unit tests for module simcado.source
+"""Unit tests for module simmetis.source
 
 Tests for source.Source object
 ------------------------------
@@ -24,7 +24,7 @@ test_source_resample_equivalency
 
 import pytest
 import numpy as np
-import simcado as sim
+import simmetis as sim
 
 def test_rotate():
     """Test method Source.rotate
@@ -151,8 +151,8 @@ def test_stars_delivers_the_same_as_SED():
 
     assert np.sum(vega_SED.val) == np.sum(vega_star.spectra[0] * \
                                                             vega_star.weight[0])
-                                                            
-                                                            
+
+
 
 def test_BV_to_spec_type():
     """

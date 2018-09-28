@@ -1138,7 +1138,7 @@ class UserPSFCube(PSFCube):
     Notes
     -----
     A separate function will exist to convert foreign PSF FITS files into
-    ``simcado.psf`` readable FITS files
+    ``simmetis.psf`` readable FITS files
 
     See Also
     --------
@@ -1172,7 +1172,7 @@ class UserPSFCube(PSFCube):
                 raise ValueError("""Could not determine wavelength of PSF in
                                  extension """ + str(i) + """. FITS file
                                  needs either WAVE0 or WAVELENG header
-                                 keywords. \n Use simcado.utils.add_keyword()
+                                 keywords. \n Use simmetis.utils.add_keyword()
                                  to add WAVELENG to the FITS header""")
             # If the wavelength is not in the 0.1-2.5 range, it must be in [m]
             if psf_lam_cen[i] < 0.1:
@@ -1370,7 +1370,7 @@ class AiryDiskDiff2DKernel(Kernel2D):
         :include-source:
 
         import matplotlib.pyplot as plt
-        from simcado.psf import AiryDiskDiff2DKernel
+        from simmetis.psf import AiryDiskDiff2DKernel
         airydiskdiff_2D_kernel = AiryDiskDiff2DKernel(10)
         plt.imshow(airydiskdiff_2D_kernel, interpolation='none', origin='lower')
         plt.xlabel('x [pixels]')
@@ -1512,7 +1512,7 @@ def make_foreign_PSF_cube(fnames, out_name=None, window=None, pix_res_orig=None,
     ::
 
         >>> from glob import glob
-        >>> import simcado as sim
+        >>> import simmetis as sim
         >>> fnames = glob("D:\Share_VW\Data_for_SimCADO\PSFs\yann_2016_11_10\*.fits")
         >>> sim.psf.make_foreign_PSF_cube(fnames, "PSF_SCAO.fits",
                                           window=512,

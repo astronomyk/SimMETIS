@@ -146,7 +146,7 @@ def rotate_blur(image, angle):
     Rotates and coadds an image over a given angle
 
     ..todo:
-        Replace the function _rotate_blur in simcado.spatial with this one
+        Replace the function _rotate_blur in simmetis.spatial with this one
 
     """
 

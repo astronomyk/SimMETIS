@@ -467,7 +467,7 @@ class EmissionCurve(TransmissionCurve):
     --------
     ::
 
-        >>> from simcado.spectral import EmissionCurve
+        >>> from simmetis.spectral import EmissionCurve
         >>>
         >>> ec_1 = EmissionCurve("emission_curve.dat")
         >>> lam = np.arange(0.7, 1.5, 0.05)

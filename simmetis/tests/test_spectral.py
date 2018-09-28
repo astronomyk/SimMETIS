@@ -1,5 +1,5 @@
-import simcado as sim
-from simcado.spectral import TransmissionCurve, EmissionCurve
+import simmetis as sim
+from simmetis.spectral import TransmissionCurve, EmissionCurve
 
 def test_multiply_TransmissionCurve():
     tc = TransmissionCurve

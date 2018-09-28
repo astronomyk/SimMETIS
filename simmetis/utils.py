@@ -1,5 +1,5 @@
 """
-Helper functions for SimCADO
+Helper functions for SimMETIS
 """
 ###############################################################################
 # utils.py
@@ -26,7 +26,7 @@ import inspect
 try:
     import wget
 except ImportError:
-    print("Package wget is not available. simcado.get_extras() will not work.")
+    print("Package wget is not available. simmetis.get_extras() will not work.")
 
 import numpy as np
 from astropy import units as u
@@ -323,7 +323,7 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
 ############# Check the server for data extras
 def download_file(url, save_dir=os.path.join(__pkg_dir__, "data")):
     """
-    Download the extra data that aren't in the SimCADO package
+    Download the extra data that aren't in the SimMETIS package
     """
 
     local_filename = os.path.join(save_dir, url.split('/')[-1])
@@ -344,7 +344,7 @@ def download_file(url, save_dir=os.path.join(__pkg_dir__, "data")):
 
 def get_extras():
     """
-    Downloads large files that SimCADO needs to simulate MICADO
+    Downloads large files that SimMETIS needs to simulate MICADO
     """
 
     save_dir = os.path.join(__pkg_dir__, "data")
@@ -386,12 +386,12 @@ def get_extras():
         else:
             print(name + " is already the latest version: " + vers)
 
-    print("Finished downloading data for SimCADO")
+    print("Finished downloading data for SimMETIS")
 
 
-def add_SED_to_simcado(file_in, file_out=None, lam_units="um"):
+def add_SED_to_simmetis(file_in, file_out=None, lam_units="um"):
     """
-    Adds the SED given in ``file_in`` to the SimCADO data directory
+    Adds the SED given in ``file_in`` to the SimMETIS data directory
 
     Parameters
     ----------
@@ -400,7 +400,7 @@ def add_SED_to_simcado(file_in, file_out=None, lam_units="um"):
         Column 1 is the wavelength, column 2 is the flux
     file_out : str, optional
         Default is None. The file path to save the ASCII file. If ``None``, the SED
-        is saved to the SimCADO data directory i.e. to ``<utils.__pkg_dir__>/data/``
+        is saved to the SimMETIS data directory i.e. to ``<utils.__pkg_dir__>/data/``
     lam_units : str, astropy.Units
         Units for the wavelength column, either as a string or as astropy units
         Default is [um]
@@ -599,7 +599,7 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["simcado", "astropy", "numpy", "scipy", "poppy", "wget"]
+    packages = ["simmetis", "astropy", "numpy", "scipy", "poppy", "wget"]
 
     # Check Python version
     import sys

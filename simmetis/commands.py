@@ -7,8 +7,8 @@ UserCommands is essentially a dictionary that holds all the variables that
 the user may wish to change. It also has some set variables like ``pix_res``
 that can be accessed directly, instead of from the dictionary.
 
-UserCommands is imported directly into the simcado package and is accessible
-from the main package - ``simcado.UserCommands``
+UserCommands is imported directly into the simmetis package and is accessible
+from the main package - ``simmetis.UserCommands``
 
 If ``UserCommands`` is called without any arguments, the default values for MICADO
 are used.
@@ -43,7 +43,7 @@ Examples
 By default ``UserCommands`` contains the parameters needed to generate the MICADO
 optical train:
 
-    >>> my_cmds = simcado.UserCommands()
+    >>> my_cmds = simmetis.UserCommands()
 
 To list the keywords that are available:
 
@@ -95,8 +95,8 @@ class UserCommands(object):
     ``<UserCommands>.pix_res`` that can be accessed directly, instead of from
     the dictionary.
 
-    ``UserCommands`` is imported directly into the simcado package and is
-    accessable from the main package - ``simcado.UserCommands``
+    ``UserCommands`` is imported directly into the simmetis package and is
+    accessable from the main package - ``simmetis.UserCommands``
 
     If UserCommands is called without any arguments, the default values for
     MICADO and the E-ELT are used.
@@ -190,8 +190,8 @@ class UserCommands(object):
     By default ``UserCommands`` contains the parameters needed to generate the
     MICADO optical train:
 
-        >>> import simcado
-        >>> my_cmds = simcado.UserCommands()
+        >>> import simmetis
+        >>> my_cmds = simmetis.UserCommands()
 
 
     To list the keywords that are available:
@@ -300,8 +300,8 @@ class UserCommands(object):
         --------
         View the default commands
 
-            >>> import simcado
-            >>> my_cmds = simcado.UserCommands()
+            >>> import simmetis
+            >>> my_cmds = simmetis.UserCommands()
             >>> print(my_cmds.cmds)
 
 
@@ -444,7 +444,7 @@ class UserCommands(object):
                     os.path.join(self.pkg_dir, "data", "PSF_SCAO.fits")
                 self.cmds["INST_USE_AO_MIRROR_BG"] = "no"
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("mcao", "maory"):
-                print("Unfortunately SimCADO doesn't yet have a MCAO PSF")
+                print("Unfortunately SimMETIS doesn't yet have a MCAO PSF")
                 print("Using the SCAO PSF instead")
                 self.cmds["SCOPE_PSF_FILE"] = \
                     os.path.join(self.pkg_dir, "data", "PSF_SCAO.fits")
@@ -811,7 +811,7 @@ def dump_mirror_config(path=None, what="scope"):
 
 def read_config(config_file):
     """
-    Read in a SimCADO configuration file
+    Read in a SimMETIS configuration file
 
     The configuration file is in SExtractor format:
        'PARAMETER    Value    # Comment'
@@ -868,7 +868,7 @@ def read_config(config_file):
 
 def update_config(config_file, config_dict):
     """
-    Update a SimCADO configuration dictionary
+    Update a SimMETIS configuration dictionary
 
     A configuration file in the SExtractor format:
     ::

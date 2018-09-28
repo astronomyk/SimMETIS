@@ -1,10 +1,10 @@
-'''Unit tests for module simcado.utils'''
+'''Unit tests for module simmetis.utils'''
 
-from simcado.utils import parallactic_angle, deriv_polynomial2d
+from simmetis.utils import parallactic_angle, deriv_polynomial2d
 import numpy as np
 
 class TestParallacticAngle():
-    '''Tests of function simcado.utils.parallactic_angle'''
+    '''Tests of function simmetis.utils.parallactic_angle'''
 
     def test_01(self):
         '''Test: parallactic angle negative east of meridian'''
@@ -41,10 +41,10 @@ class TestParallacticAngle():
 
 
 class TestDerivPolynomial2D():
-    '''Tests of simcado.utils.deriv_polynomial2d'''
+    '''Tests of simmetis.utils.deriv_polynomial2d'''
 
     def test_01(self):
-        '''Test simcado.utils.deriv_polynomial2d'''
+        '''Test simmetis.utils.deriv_polynomial2d'''
         from astropy.modeling.models import Polynomial2D
 
         ximg, yimg = np.meshgrid(np.linspace(-1, 1, 101),

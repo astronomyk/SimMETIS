@@ -216,8 +216,8 @@ class OpticalTrain(object):
 
         See also
         --------
-        :class:`simcado.spectral.TransmissionCurve`
-        :func:`simcado.optics.get_filter_set`
+        :class:`simmetis.spectral.TransmissionCurve`
+        :func:`simmetis.optics.get_filter_set`
 
         """
         if filter_name == lam == trans == None:

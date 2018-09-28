@@ -8,7 +8,7 @@ import logging
 
 from astropy.utils.exceptions import AstropyWarning
 
-# Import all the modules to go under simcado.detector
+# Import all the modules to go under simmetis.detector
 from . import utils
 
 from . import spectral
@@ -50,9 +50,9 @@ from .sandbox import imf
 
 
 
-logging.basicConfig(filename='simcado.log', filemode='w', level=logging.DEBUG,
+logging.basicConfig(filename='simmetis.log', filemode='w', level=logging.DEBUG,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.info("SimCADO imported")
+logging.info("SimMETIS imported")
 
 #warnings.simplefilter('ignore', UserWarning)   # user should see UserWarnings
 warnings.simplefilter('ignore', FutureWarning)

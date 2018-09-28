@@ -3,7 +3,7 @@
 import numpy as np
 from astropy import units as u
 from astropy import constants as const
-import simcado as sim
+import simmetis as sim
 import glob
 
 def calculate_zeropoint(filter_name,verbose=False):
@@ -29,10 +29,10 @@ def calculate_zeropoint(filter_name,verbose=False):
 	##
 	## detector image with Poisson noise
 	hdu = fpa.read_out(OBS_EXPTIME=exptime)
-	
+
 	bg_counts = np.min(clean_image)
 	source_minus_bg_counts = np.sum(clean_image - np.min(clean_image))
-	
+
 	if verbose:
 		print("Background counts/s: {0:.2E}".format(bg_counts))
 		print("Background-subtracted source counts/s: {0:.2E}".format(source_minus_bg_counts))
@@ -45,7 +45,7 @@ def all_zeropoints():
 	f=[]
 	bg=[]
 	src=[]
-	
+
 	for filter in filters:
 		filter=filter.split("TC_filter_")[1].split(".")[0]
 		bg_counts, source_minus_bg_counts = calculate_zeropoint(filter)

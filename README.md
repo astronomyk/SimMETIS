@@ -6,4 +6,4 @@ It includes a notebook for each METIS mode.
 
 Please include the output of the following command in all bug reports:
 
-    >>> simcado.bug_report()
+    >>> simmetis.bug_report()

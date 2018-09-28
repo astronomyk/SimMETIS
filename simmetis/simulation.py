@@ -7,7 +7,7 @@ import warnings, logging
 
 import numpy as np
 
-import simcado as sim
+import simmetis as sim
 
 __all__ = ["run", "snr", "check_chip_positions", "limiting_mags"]
 
@@ -20,19 +20,19 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
 
     Parameters
     ----------
-    src : simcado.Source
+    src : simmetis.Source
         The object of interest
 
     mode : str, optional
         ["wide", "zoom"] Default is "wide", for a 4mas FoV. "Zoom" -> 1.5mas
 
-    cmds : simcado.UserCommands, optional
+    cmds : simmetis.UserCommands, optional
         A custom set of commands for the simulation. Default is None
 
-    opt_train : simcado.OpticalTrain, optional
+    opt_train : simmetis.OpticalTrain, optional
         A custom optical train for the simulation. Default is None
 
-    fpa : simcado.Detector, optional
+    fpa : simmetis.Detector, optional
         A custom detector layout for the simulation. Default is None
 
     detector_layout : str, optional
@@ -155,30 +155,30 @@ def _make_snr_grid_fpas(filter_names=["J", "H", "Ks"], mmin=22, mmax=32,
     Parameters
     ----------
     filter_names : list
-        Which filters to use for the images. See ``simcado.optices.get_filter_set()``
+        Which filters to use for the images. See ``simmetis.optices.get_filter_set()``
 
     mmin, mmax : float
         [mag] Minimum and maximum magnitudes to use for the grid of stars
 
-    cmds : simcado.UserCommands
+    cmds : simmetis.UserCommands
         A custom set of commands for building the optical train
 
     Optional Parameters
     -------------------
     Any Keyword-Value pairs accepted by a
-    :class:`~simcado.commands.UserCommands` object
+    :class:`~simmetis.commands.UserCommands` object
 
     Returns
     -------
     fpas : list
         A list of :class:`Detector` objects with the grid of stars for each filter
         len(fpas) == len(filter_names)
-    grid : simcado.Source
+    grid : simmetis.Source
         A :class:`Source` object containing the grids of stars
 
     See Also
     --------
-    :class:`~simcado.commands.UserCommands`
+    :class:`~simmetis.commands.UserCommands`
 
     """
 
@@ -222,7 +222,7 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
         The output from A list of :class:`Detector` objects with the grid of stars
         for each filter
 
-    grid : simcado.Source
+    grid : simmetis.Source
         The :class:`Source` object containing the grid of stars - used for the pixel
         positions of the stars
 
@@ -230,7 +230,7 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
         [s] An array of exposure times in seconds
 
     filter_names : list
-        A list of filters. See :func:`simcado.optics.get_filter_set`
+        A list of filters. See :func:`simmetis.optics.get_filter_set`
 
     mmin, mmax : float
         [mag] the minimum and maximum magnitudes in the grid of stars
@@ -334,7 +334,7 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags, filter_names=["J", "H"
         Dimensions are (1, n) for a single filter, or (m, n) for m filters
 
     filter_names : list
-        A list of m filters. See :func:`simcado.optics.get_filter_set`
+        A list of m filters. See :func:`simmetis.optics.get_filter_set`
 
     colors : list
         The colours to use for dots in the plot
@@ -414,7 +414,7 @@ def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
         [s] Exposure times for which limiting magnitudes should be found
 
     filter_names : list
-        A list of filters. See :func:`simcado.optics.get_filter_set`
+        A list of filters. See :func:`simmetis.optics.get_filter_set`
 
     AB_corrs : list
         [mag] A list of magnitude corrections to convert from Vega to AB magnitudes
@@ -430,13 +430,13 @@ def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
         If True (defualt), a graph of the limiting magnitudes vs exposure time is plotted
         Calls :func:`plot_exptime_vs_limiting_mag`
 
-    cmds : simcado.UserCommands
+    cmds : simmetis.UserCommands
         A custom set of commands for building the optical train
 
 
     Optional Parameters
     -------------------
-    Any Keyword-Value pairs accepted by a :class:`~simcado.UserCommands` object
+    Any Keyword-Value pairs accepted by a :class:`~simmetis.UserCommands` object
 
 
     Returns
@@ -497,7 +497,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
         [mag] minimum and maximum magnitudes tor the SNR curve
 
     filter_name : str
-        The name of a filter installed in SimCADO - see ``:func:~simcado.optics.get_filter_set()``
+        The name of a filter installed in SimMETIS - see ``:func:~simmetis.optics.get_filter_set()``
 
     aperture_radius : int
         [pixels] The radius of the aperture places around each star
@@ -523,7 +523,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
 
     See Also
     --------
-    ``:func:~simcado.optics.get_filter_set()``
+    ``:func:~simmetis.optics.get_filter_set()``
 
     """
 
@@ -622,7 +622,7 @@ def plot_snr_curve(snr_array, mags, snr_markers=[5, 10, 250]):
     Example
     -------
 
-        >>> from simcado.simulation import snr_curve, plot_snr_curve
+        >>> from simmetis.simulation import snr_curve, plot_snr_curve
         >>> snrs, mag = snr_curve(exptimes=[60, 600, 3600], filter_name="J")
         >>> plot_snr_curve(snrs[-1], mag, snr_Markers=[5,10,50,250])
 
@@ -651,7 +651,7 @@ def plot_snr_rainbow(exptimes, mags, snr_array, snr_levels=[5,10,250], text_heig
     """
     Plot a nice rainbow curve of the SNR as a function of exposure time and magnitude
 
-    Basically accepts the output from ''func::~simcado.simulation.snr_curve()''
+    Basically accepts the output from ''func::~simmetis.simulation.snr_curve()''
 
     Parameters
     ----------
@@ -720,7 +720,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     """
     Returns the signal-to-noise ratio(s) for given exposure times and magnitudes
 
-    Each time this runs, simcado runs a full simulation on a grid of stars. Therefore
+    Each time this runs, simmetis runs a full simulation on a grid of stars. Therefore
     if you are interested in the SNR for many difference expoure times and a range of
     magnitudes, it is faster to pass all of them at once to this function. See the
     exmaple section below.
@@ -734,11 +734,11 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
         [mag] A single or multiple magnitudes
 
     filter_name : str, optional
-        The name of the filter to be used - See :func:`~simcado.optics.get_filter_set`
+        The name of the filter to be used - See :func:`~simmetis.optics.get_filter_set`
         The default is "Ks"
 
     cmds : UserCommands object, optional
-        Extra commands to be passed to :func:`simcado.simulation.run`.
+        Extra commands to be passed to :func:`simmetis.simulation.run`.
 
     Optional Parameters
     -------------------
@@ -772,7 +772,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     24th magnitude star in the narrow band Br$\gamma$ filter:
 
         >>> # Chekc the name of the Brackett Gamma filter
-        >>> [name for name in simcado.optics.get_filter_set() if "Br" in name]
+        >>> [name for name in simmetis.optics.get_filter_set() if "Br" in name]
         ['BrGamma']
         >>> snr(exptimes=[600, 18000], mags=24, filter_name="BrGamma")
         [8.016218764390803, 42.71569256185457]
@@ -813,7 +813,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     # ratio or a list of magnitudes in ``mags`` in a certain broadband
     # ``filter_name``.
     # A custom UserCommands object can also be used. Note that this runs a basic
-    # SimCADO simulation len(mags) times, so execution time can be many minutes.
+    # SimMETIS simulation len(mags) times, so execution time can be many minutes.
 
     # Parameters
     # ----------
@@ -829,8 +829,8 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     # ndit : int, optional
         # Number of readouts during the period ``exptime``. Default is 1
 
-    # cmds : simcado.UserCommands, optional
-        # A custom set of commands for the simulations. If not specified, SimCADO
+    # cmds : simmetis.UserCommands, optional
+        # A custom set of commands for the simulations. If not specified, SimMETIS
         # uses the default MICADO parameters
 
     # Returns
@@ -842,7 +842,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     # TODO: What about argument cmds? (OC)
 
     # warnings.warn("""This is in the process of being depreciated.
-                     # Use 'snr_curve()' until SimCADO v0.5 is released""")
+                     # Use 'snr_curve()' until SimMETIS v0.5 is released""")
 
     # if cmds is None:
         # cmd = sim.UserCommands()

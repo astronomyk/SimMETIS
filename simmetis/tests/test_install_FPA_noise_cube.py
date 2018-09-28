@@ -1,6 +1,6 @@
 def install_FPA_noise_cube():
     import os
-    import simcado as sim
+    import simmetis as sim
     fname = os.path.join(sim.utils.__pkg_dir__, data, "FPA_nirspec_pca0.fits")
     if os.path.exists(fname):
         sim.detector.install_noise_cube(1)
