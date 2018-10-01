@@ -31,7 +31,7 @@ from . import spectral as sc
 from . import spatial as pe
 from .source import flat_spectrum_sb, scale_spectrum_sb
 from .commands import UserCommands
-from .utils import __pkg_dir__
+from .utils import __pkg_dir__, find_file
 
 import pdb
 
@@ -299,12 +299,9 @@ class OpticalTrain(object):
         # Load transmission curves into a dictionary indexed by coating
         tc_dict = dict()
         for coating in np.unique(mirr_list['Coating']):
-            if os.path.exists(coating):
-                tc_file = coating
-            elif os.path.exists(os.path.join(__pkg_dir__, "data", coating)):
-                tc_file = os.path.join(__pkg_dir__, "data", coating)
-            else:
-                raise ValueError("Could not find file: "+coating)
+            tc_file = find_file(coating, self.cmds.search_path, silent=True)
+            if tc_file is None:
+                raise ValueError("Could not find file: " + coating)
 
             tc_dict[coating] = sc.TransmissionCurve(tc_file)
 
