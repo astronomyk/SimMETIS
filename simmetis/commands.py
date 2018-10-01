@@ -61,17 +61,19 @@ keywords - e.g. for the keywords for the instrument:
 """
 
 
-import os, shutil
-import warnings, logging
+import os
+import shutil
+import warnings
+import logging
 
 from collections import OrderedDict
 
 import numpy as np
 import astropy.io.ascii as ioascii    # ascii redefines builtin ascii().
-from astropy.io import fits
+#from astropy.io import fits  # unused
 
 from . import spectral as sc
-from .utils import __pkg_dir__, atmospheric_refraction
+from .utils import __pkg_dir__, atmospheric_refraction, find_file
 from .psf import PSFCube
 
 #__all__ = []
@@ -235,6 +237,12 @@ class UserCommands(object):
             self.cmds.update(read_config(filename))
 
         # set the default paths and file names and turn any "none" strings
+        # set up a file search path
+        self.search_path = ['./',
+                            self.cmds['SIM_DATA_DIR'],
+                            __pkg_dir__,
+                            os.path.join(__pkg_dir__, "data")]
+
         # into python None values
         self._convert_none()
         self._find_files()
@@ -385,14 +393,8 @@ class UserCommands(object):
 
     def _find_files(self):
         """
-        Checks for a file in the directorys: "./", <pkg_dir>, <pkg_dir>/data
+        Checks for files in the directorys: "./", SIM_DATA_DIR, <pkg_dir>, <pkg_dir>/data
         """
-
-        # TODO: search_path should be defined in class
-        search_path = ['./',
-                       self.cmds['SIM_DATA_DIR'],
-                       __pkg_dir__,
-                       os.path.join(__pkg_dir__, "data")]
 
         for key in self.cmds:
             if key == "OBS_OUTPUT_DIR":       # need not exist
@@ -402,32 +404,22 @@ class UserCommands(object):
 
             # not a string: not a filename
             if not isinstance(keyval, str):
-                continue   # not a string
-
-            # absolute path: nothing to be done
-            if os.path.isabs(keyval):
-                if not os.path.exists(keyval):
-                    warnings.warn("Keyword "+key+" path doesn't exist: "
-                                  + keyval)
                 continue
 
-            # if string has no extension, assume it's not a file name
+            # If string has no extension, assume it's not a file name.
+            # This is a strong assumption, but we need to guard from
+            # looking for "yes", "no", "none", "scao", etc.
+            # TODO Can we have a list of reserved keywords?
             if "." in keyval and len(keyval.split(".")[-1]) > 1:
+                continue
 
-                # try to find the file in a search path
-                trynames = [os.path.join(trydir, keyval)
-                            for trydir in search_path]
-
-                for fname in trynames:
-                    if os.path.exists(fname):
-                        # strip leading ./
-                        while fname[:2] =='./':
-                            fname = fname[2:]
-                        self.cmds[key] = fname
-                        break
-                else:  # no file found
-                    warnings.warn("Keyword "+key+" path doesn't exist: "
-                                  + keyval)
+            # look for the file
+            fname = find_file(keyval, self.search_path, silent=True)
+            if fname is None:
+                warnings.warn("Keyword "+key+" path doesn't exist: "
+                              + keyval)
+            else:
+                self.cmds[key] = fname
 
 
     def _default_data(self):
@@ -436,7 +428,7 @@ class UserCommands(object):
         """
 
         if isinstance(self.cmds["SCOPE_PSF_FILE"], str):
-            if self.cmds["SCOPE_PSF_FILE"].lower() in ("ltao"):
+            if self.cmds["SCOPE_PSF_FILE"].lower() in ["ltao"]:
                 self.cmds["SCOPE_PSF_FILE"] = \
                     os.path.join(self.pkg_dir, "data", "PSF_LTAO.fits")
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("default", "scao"):
@@ -699,8 +691,7 @@ class UserCommands(object):
         if self.cmds["CONFIG_USER"] is not None:
             return "A dictionary of commands compiled from " + \
                                                         self.cmds["CONFIG_USER"]
-        else:
-            return "A dictionary of default commands"
+        return "A dictionary of default commands"
 
     def __iter__(self):
         return self.cmds.__iter__()
