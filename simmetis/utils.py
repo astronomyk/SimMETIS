@@ -640,6 +640,10 @@ def find_file(filename, path=None, silent=False):
     -------
     Absolute path of the file
 '''
+    # Replace '.'
+    for i, trydir in enumerate(path):
+        if trydir == '.' or trydir == './':
+            path[i] = os.getcwd()
 
     if path is None:
         path = [os.getcwd()]
