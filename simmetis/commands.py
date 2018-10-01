@@ -411,15 +411,13 @@ class UserCommands(object):
             # looking for "yes", "no", "none", "scao", etc.
             # TODO Can we have a list of reserved keywords?
             if "." in keyval and len(keyval.split(".")[-1]) > 1:
-                continue
-
-            # look for the file
-            fname = find_file(keyval, self.search_path, silent=True)
-            if fname is None:
-                warnings.warn("Keyword "+key+" path doesn't exist: "
-                              + keyval)
-            else:
-                self.cmds[key] = fname
+                # look for the file
+                fname = find_file(keyval, self.search_path, silent=True)
+                if fname is None:
+                    warnings.warn("Keyword "+key+" path doesn't exist: "
+                                  + keyval)
+                else:
+                    self.cmds[key] = fname
 
 
     def _default_data(self):
