@@ -1,7 +1,30 @@
 '''Unit tests for module simmetis.utils'''
 
+import pytest
+import simmetis as sim
 from simmetis.utils import parallactic_angle, deriv_polynomial2d
+from simmetis.utils import find_file
 import numpy as np
+
+
+class TestFindFile():
+    '''Tests of function simmetis.utils.find_file'''
+    search_path = ['./', sim.__pkg_dir__]
+    def test_01(self):
+        '''Test: fail if not a string'''
+        with pytest.raises(TypeError):
+            find_file(1.2, self.search_path)
+
+    def test_02(self):
+        '''Test: existing file'''
+        filename = 'utils.py'
+        assert find_file(filename, self.search_path)
+
+    def test_03(self):
+        '''Test: non-extisting file'''
+        filename = 'utils987654.pz'
+        assert find_file(filename, self.search_path) is None
+
 
 class TestParallacticAngle():
     '''Tests of function simmetis.utils.parallactic_angle'''
@@ -60,5 +83,5 @@ class TestDerivPolynomial2D():
         y_x_test = dpoly_x(ximg, yimg)
         y_y_test = dpoly_y(ximg, yimg)
 
-        assert(np.allclose(y_x, y_x_test))
-        assert(np.allclose(y_y, y_y_test))
+        assert np.allclose(y_x, y_x_test)
+        assert np.allclose(y_y, y_y_test)

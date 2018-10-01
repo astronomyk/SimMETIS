@@ -622,3 +622,46 @@ def bug_report():
     print("         Release: ", osinfo.release)
     print("         Version: ", osinfo.version)
     print("         Machine: ", osinfo.machine)
+
+
+def find_file(filename, path=None, silent=False):
+    '''Find a file in search path
+
+    Parameters
+    ----------
+    filename : str
+        name of a file to look for
+    path : list
+        list of directories to search (default: ['./'])
+    silent : bool
+        if True, remain silent when file is not found
+
+    Returns
+    -------
+    Absolute path of the file
+'''
+
+    if path is None:
+        path = [os.getcwd()]
+
+    if os.path.isabs(filename):
+        # absolute path: only path to try
+        trynames = [filename]
+    else:
+        # try to find the file in a search path
+        trynames = [os.path.join(trydir, filename)
+                    for trydir in path]
+
+    for fname in trynames:
+        if os.path.exists(fname):   # success
+            # strip leading ./
+            while fname[:2] == './':
+                fname = fname[2:]
+            return fname
+        else:
+            continue
+
+    # no file found
+    if not silent:
+        print("File cannot be found: " + filename)
+    return None
