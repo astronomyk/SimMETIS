@@ -1530,7 +1530,7 @@ def zero_magnitude_photon_flux(filter_name):
             fname = filter_name
         elif os.path.exists(os.path.join(__pkg_dir__, "data", filter_name)):
             fname = os.path.join(__pkg_dir__, "data", filter_name)
-        elif os.path.join(__pkg_dir__, "data",
+        elif os.path.exists(__pkg_dir__, "data",
                                  "TC_filter_" + filter_name + ".dat"):
             fname = os.path.join(__pkg_dir__, "data",
                                  "TC_filter_" + filter_name + ".dat")
