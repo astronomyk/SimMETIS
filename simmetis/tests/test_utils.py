@@ -9,21 +9,21 @@ import numpy as np
 
 class TestFindFile():
     '''Tests of function simmetis.utils.find_file'''
-    search_path = ['./', sim.__pkg_dir__]
+
     def test_01(self):
         '''Test: fail if not a string'''
         with pytest.raises(TypeError):
-            find_file(1.2, self.search_path)
+            find_file(1.2, sim.__search_path__)
 
     def test_02(self):
         '''Test: existing file'''
         filename = 'utils.py'
-        assert find_file(filename, self.search_path)
+        assert find_file(filename, sim.__search_path__)
 
     def test_03(self):
         '''Test: non-extisting file'''
         filename = 'utils987654.pz'
-        assert find_file(filename, self.search_path) is None
+        assert find_file(filename, sim.__search_path__) is None
 
 
 class TestParallacticAngle():

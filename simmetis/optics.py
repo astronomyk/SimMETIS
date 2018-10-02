@@ -26,6 +26,7 @@ from astropy.io import fits      # unused
 from astropy.io import ascii as ioascii    # 'ascii' redefines built-in
 import astropy.units as u
 
+import simmetis as sim
 from . import psf as psf
 from . import spectral as sc
 from . import spatial as pe
@@ -299,7 +300,7 @@ class OpticalTrain(object):
         # Load transmission curves into a dictionary indexed by coating
         tc_dict = dict()
         for coating in np.unique(mirr_list['Coating']):
-            tc_file = find_file(coating, self.cmds.search_path, silent=True)
+            tc_file = find_file(coating, sim.__search_path__, silent=True)
             if tc_file is None:
                 raise ValueError("Could not find file: " + coating)
 
@@ -696,8 +697,10 @@ def get_filter_curve(filter_name):
     """
 
     if filter_name not in get_filter_set(path=None):
-        raise ValueError("filter not recognised: "+filter)
-    fname = os.path.join(__pkg_dir__, "data", "TC_filter_"+filter_name+".dat")
+        raise ValueError("filter not recognised: " + filter_name)
+    #fname = os.path.join(__pkg_dir__, "data", "TC_filter_" + filter_name
+    #                     + ".dat")
+    fname = find_file("TC_filter_" + filter_name + ".dat")
     return sc.TransmissionCurve(filename=fname)
 
 

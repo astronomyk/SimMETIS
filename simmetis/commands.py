@@ -72,6 +72,7 @@ import numpy as np
 import astropy.io.ascii as ioascii    # ascii redefines builtin ascii().
 #from astropy.io import fits  # unused
 
+import simmetis as sim
 from . import spectral as sc
 from .utils import __pkg_dir__, atmospheric_refraction, find_file
 from .psf import PSFCube
@@ -236,12 +237,10 @@ class UserCommands(object):
         if filename is not None:
             self.cmds.update(read_config(filename))
 
-        # set the default paths and file names and turn any "none" strings
-        # set up a file search path
-        self.search_path = ['./',
-                            self.cmds['SIM_DATA_DIR'],
-                            __pkg_dir__,
-                            os.path.join(__pkg_dir__, "data")]
+        # add the instrument-specific data directory to the package
+        # search path
+        if sim.__search_path__[1] != self.cmds['SIM_DATA_DIR']:
+            sim.__search_path__.insert(1, self.cmds['SIM_DATA_DIR'])
 
         # into python None values
         self._convert_none()
@@ -393,7 +392,10 @@ class UserCommands(object):
 
     def _find_files(self):
         """
-        Checks for files in the directorys: "./", SIM_DATA_DIR, <pkg_dir>, <pkg_dir>/data
+        Checks for files in the package search path
+
+        The search path comprises the directories:
+            "./", SIM_DATA_DIR, <pkg_dir>, <pkg_dir>/data
         """
 
         for key in self.cmds:
@@ -412,7 +414,7 @@ class UserCommands(object):
             # TODO Can we have a list of reserved keywords?
             if "." in keyval and len(keyval.split(".")[-1]) > 1:
                 # look for the file
-                fname = find_file(keyval, self.search_path, silent=True)
+                fname = find_file(keyval, sim.__search_path__, silent=True)
                 if fname is None:
                     warnings.warn("Keyword "+key+" path doesn't exist: "
                                   + keyval)
@@ -428,20 +430,21 @@ class UserCommands(object):
         if isinstance(self.cmds["SCOPE_PSF_FILE"], str):
             if self.cmds["SCOPE_PSF_FILE"].lower() in ["ltao"]:
                 self.cmds["SCOPE_PSF_FILE"] = \
-                    os.path.join(self.pkg_dir, "data", "PSF_LTAO.fits")
+                    find_file("PSF_LTAO.fits", sim.__search_path__)
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("default", "scao"):
                 self.cmds["SCOPE_PSF_FILE"] = \
-                    os.path.join(self.pkg_dir, "data", "PSF_SCAO.fits")
+                    find_file("PSF_SCAO.fits", sim.__search_path__)
                 self.cmds["INST_USE_AO_MIRROR_BG"] = "no"
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("mcao", "maory"):
                 print("Unfortunately SimMETIS doesn't yet have a MCAO PSF")
                 print("Using the SCAO PSF instead")
                 self.cmds["SCOPE_PSF_FILE"] = \
-                    os.path.join(self.pkg_dir, "data", "PSF_SCAO.fits")
+                    find_file("PSF_SCAO.fits", sim.__search_path__)
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("poppy", "ideal"):
                 self.cmds["SCOPE_PSF_FILE"] = \
-                    os.path.join(self.pkg_dir, "data", "PSF_POPPY.fits")
-            elif not os.path.exists(self.cmds["SCOPE_PSF_FILE"]):
+                    find_file("PSF_POPPY.fits", sim.__search_path__)
+            elif (find_file(self.cmds["SCOPE_PSF_FILE"], sim.__search_path__)
+                  is None):
                 raise ValueError("Cannot recognise PSF file name: " + \
                                                     self.cmds["SCOPE_PSF_FILE"])
         elif isinstance(self.cmds["SCOPE_PSF_FILE"], PSFCube):
@@ -452,8 +455,8 @@ class UserCommands(object):
             logging.debug("SCOPE_PSF_FILE is None - Generating PSF from OBS_SEEING")
 
         else:
-            raise ValueError("Cannot recognise SCOPE_PSF_FILE: " + \
-                                                    self.cmds["SCOPE_PSF_FILE"])
+            raise ValueError("Cannot recognise SCOPE_PSF_FILE: " +
+                             self.cmds["SCOPE_PSF_FILE"])
 
 
         if self.cmds["INST_MIRROR_TC"] == "default":
@@ -466,17 +469,17 @@ class UserCommands(object):
         # which detector chip to use
         if self.cmds["FPA_CHIP_LAYOUT"] in (None, "none", "default", "full"):
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                os.path.join(self.pkg_dir, "data", "FPA_chip_layout.dat")
+                find_file("FPA_chip_layout.dat", sim.__search_path__)
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "small":
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                os.path.join(self.pkg_dir, "data", "FPA_chip_layout_small.dat")
+                find_file("FPA_chip_layout_small.dat", sim.__search_path__)
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "tiny":
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                os.path.join(self.pkg_dir, "data", "FPA_chip_layout_tiny.dat")
+                find_file("FPA_chip_layout_tiny.dat", sim.__search_path__)
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() in ("centre", "central",
                                                       "middle", "center"):
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                os.path.join(self.pkg_dir, "data", "FPA_chip_layout_centre.dat")
+                find_file("FPA_chip_layout_centre.dat", sim.__search_path__)
 
 
 
@@ -506,17 +509,17 @@ class UserCommands(object):
 
 
         # Check for a filter curve file or a standard broadband name
-        if isinstance(self.cmds["INST_FILTER_TC"], str) and \
-                                not os.path.exists(self.cmds["INST_FILTER_TC"]):
-            # try in pkg_dir
-            fname = os.path.join(self.pkg_dir, "data", self.cmds["INST_FILTER_TC"])
+        if isinstance(self.cmds["INST_FILTER_TC"], str):
 
-            if not os.path.exists(self.cmds["INST_FILTER_TC"]):
+            fname = find_file(self.cmds["INST_FILTER_TC"], sim.__search_path__)
+
+            if fname is None:
                 # try the name of the filter
-                fname = os.path.join(self.pkg_dir, "data",
-                        "TC_filter_" + self.cmds["INST_FILTER_TC"] + ".dat")
-                if not os.path.exists(fname):
-                    raise ValueError("File " + fname + " does not exist")
+                tryname = "TC_filter_" + self.cmds["INST_FILTER_TC"] + ".dat"
+                fname = find_file(tryname, sim.__search_path__)
+                if fname is None:
+                    raise ValueError("Filter " + self.cmds["INST_FILTER_TC"] +
+                                     "could not be found")
 
             self.cmds["INST_FILTER_TC"] = fname
 
@@ -758,7 +761,7 @@ def dump_chip_layout(path=None):
     path : str, optional
         path where the chip layout file is to be saved
     """
-    fname = os.path.join(__pkg_dir__, "data", "FPA_chip_layout.dat")
+    fname = find_file("FPA_chip_layout.dat", sim.__search_path__)
 
     if path is None:
         f = open(fname, "r")
@@ -768,6 +771,7 @@ def dump_chip_layout(path=None):
         path = os.path.dirname(path)
         shutil.copy(fname, path)
         logging.debug("Printed chip layout to file: "+path+"/"+fname)
+
 
 def dump_mirror_config(path=None, what="scope"):
     """
@@ -784,10 +788,10 @@ def dump_mirror_config(path=None, what="scope"):
 
     if what.lower() == "scope":
         print("Dumping telescope mirror configuration.")
-        fname = os.path.join(__pkg_dir__, "data", "EC_mirrors_scope.tbl")
+        fname = find_file("EC_mirrors_scope.tbl", sim.__search_path__)
     elif what.lower() == "ao":
         print("Dumping AO mirror configuration.")
-        fname = os.path.join(__pkg_dir__, "data", "EC_mirrors_ao.tbl")
+        fname = find_file("EC_mirrors_ao.tbl", sim.__search_path__)
 
     if path is None:
         f = open(fname, "r")

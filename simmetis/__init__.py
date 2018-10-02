@@ -44,6 +44,8 @@ from .detector import install_noise_cube
 from os.path import join
 __data_dir__ = join(__pkg_dir__, "data")
 
+# Search path for finding files
+__search_path__ = ['./', __pkg_dir__, __data_dir__]
 
 # import the experimental stuff
 from .sandbox import imf

@@ -102,7 +102,6 @@ convolution of a list of PSF components
 """
 
 import os
-from .utils import __pkg_dir__
 
 import warnings, logging
 from copy import deepcopy
