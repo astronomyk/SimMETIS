@@ -60,8 +60,6 @@ def all_zeropoints():
 		filter_id = filter_path.split("TC_filter_")[1].split(".dat")[0]
 		print(filter_id)
 		bg_counts, source_minus_bg_counts = calculate_zeropoint(filter_id,filter_path)
-		#bg_counts=1
-		#source_minus_bg_counts=2
 
 		with open("zeropoints_simcado.txt","a") as f:
 			line="{0:>15}    {1:.2E}    {2:.2E}    {3}\n".format(filter_id,bg_counts,source_minus_bg_counts,filename)

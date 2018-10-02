@@ -39,5 +39,5 @@ plt.ylabel("Simcado's flux / Roy's flux")
 plt.title("Background fluxes [ph/s/px]")
 
 plt.tight_layout()
-plt.savefig("zeropoints_compare.pdf")
+plt.savefig("zeropoints_compare.png")
 plt.clf()

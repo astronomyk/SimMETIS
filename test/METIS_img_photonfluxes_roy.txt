@@ -1,0 +1,28 @@
+# METIS IMG photon fluxes in focal plane for a 0th magnitude star (Vega system)
+# in the focal plane (including all transmission losses). Median conditions 
+# assumed. Origin: E-Mail Roy van Boekel 23 July 2017
+#  id           filter            lam_c      photon flux
+#                                 [micron]   [ph/s]
+Lp              "Lp"              3.78       2.122e+11
+Mp              "Mp"              4.82       7.156e+10
+short-L         "short-L"         3.31       1.427e+11
+H2O-ice         "H2O-ice"         3.11       5.175e+10
+IB_405          "IB 4.05"         4.05       1.869e+10
+PAH_33          "PAH 3.3"         3.30       1.391e+10
+PAH_33_ref      "PAH 3.3 ref"     3.35       1.358e+10
+Br_alpha        "Br alpha"        4.05       4.576e+09
+Br_alpha_ref    "Br alpha ref"    4.07       4.450e+09
+CO_10_ice       "CO(1-0)/ice"     4.67       1.987e+10
+CO_10_ice_ref   "CO ref"          4.80       2.069e+10
+N1              "N1"              8.66       3.541e+10
+N2              "N2"              11.50      3.958e+10
+N3              "N3"              12.26      1.434e+10
+Q1              "Q1"              17.79      1.728e+08
+PAH_8_6         "PAH 8.6"         8.60       9.811e+09
+PAH_8_6_ref     "PAH 8.6 ref"     9.10       6.868e+09
+PAH_11_25       "PAH 11.25"       11.20      3.666e+09
+PAH_11_25_ref   "PAH 11.25 ref"   11.90      2.957e+09
+NeII            "[Ne II]"         12.82      1.364e+09
+NeII_ref        "[Ne II] ref"     13.02      1.259e+09
+SIV             "[S IV]"          10.50      2.384e+09
+SIV_ref         "[S IV] ref"      10.79      2.580e+09
