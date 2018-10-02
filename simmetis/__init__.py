@@ -6,6 +6,8 @@ End-to-end simulator for MICADO on the E-ELT
 import warnings
 import logging
 
+from os.path import join
+
 from astropy.utils.exceptions import AstropyWarning
 
 # Import all the modules to go under simmetis.detector
@@ -41,7 +43,6 @@ from .simulation import run
 from .utils import get_extras
 from .detector import install_noise_cube
 
-from os.path import join
 __data_dir__ = join(__pkg_dir__, "data")
 
 # Search path for finding files
