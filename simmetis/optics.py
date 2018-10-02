@@ -23,7 +23,6 @@ from copy import deepcopy
 import numpy as np
 
 from astropy.io import fits      # unused
-from astropy.io import ascii as ioascii    # 'ascii' redefines built-in
 import astropy.units as u
 
 import simmetis as sim
@@ -34,7 +33,6 @@ from .source import flat_spectrum_sb, scale_spectrum_sb
 from .commands import UserCommands
 from .utils import __pkg_dir__, find_file
 
-import pdb
 
 __all__ = ["OpticalTrain", "get_filter_curve", "get_filter_set"]
 
@@ -484,7 +482,6 @@ class OpticalTrain(object):
             else:
                 ################## TODO ######################
                 # Generalise this to accept any TransmissionCurve object
-                from .source import flat_spectrum_sb
                 self.ec_atmo = flat_spectrum_sb(self.cmds["ATMO_BG_MAGNITUDE"],
                                                 self.cmds["INST_FILTER_TC"],
                                                 self.cmds["SIM_DETECTOR_PIX_SCALE"],

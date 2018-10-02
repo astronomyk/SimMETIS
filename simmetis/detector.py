@@ -101,6 +101,7 @@ from astropy.wcs import WCS
 
 #from astropy.stats.funcs import median_absolute_deviation as mad
 
+import simmetis as sim
 from .utils import __pkg_dir__, find_file
 
 from . import spectral as sc
@@ -992,7 +993,7 @@ class Chip(object):
 #        image2[image2 > 2.14E9] = 2.14E9
 
         im_st = np.zeros(np.shape(image))
-        for n in range(ndit):
+        for _ in range(ndit):
             im_st += np.random.poisson(image2)
 
         return im_st.astype(np.float32)
@@ -1156,7 +1157,7 @@ class Chip(object):
 
 
 
-
+# TODO this ought to be renamed (redefined-builtin)
 def open(self, filename):
     """
     Opens a saved ``Detector`` file.
@@ -1215,7 +1216,7 @@ def plot_detector_layout(detector, plane="sky", clr='g-', plot_origin=False):
 
     from matplotlib import pyplot as plt
     npts = 101
-    for i, chip in enumerate(detector.chips):
+    for chip in detector.chips:
 
         if plane == 'sky':
             thewcs = chip.wcs
