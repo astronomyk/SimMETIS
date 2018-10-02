@@ -1,0 +1,25 @@
+# 2018-09-27, RvB, zeropoints for METIS IMG
+#             filter       lam_c     limit   inband_flux0   inband_flux0      zeropoint     background     background
+#                       [micron]    [muJy]         [ph/s]         [e-/s]           [Jy]     [ph/s/pix]     [e-/s/pix]
+                  "Lp"      3.78     0.587      2.122e+11      1.834e+11        247.006      3.241e+05      2.754e+05              TC_filter_Lp.dat
+                  "Mp"      4.82     4.477      7.156e+10      5.204e+10        156.336      2.798e+06      2.010e+06              TC_filter_Mp.dat
+             "short-L"      3.31     0.443      1.427e+11      1.266e+11        314.808      6.757e+04      5.988e+04         TC_filter_short-L.dat
+             "H2O-ice"      3.11     0.537      5.175e+10      4.638e+10        351.776      1.200e+04      1.075e+04         TC_filter_H2O-ice.dat
+             "IB 4.05"      4.05     2.879      1.869e+10      1.569e+10        214.062      6.732e+04      5.615e+04         TC_filter_IB_4.05.dat
+             "PAH 3.3"      3.30     1.733      1.391e+10      1.235e+10        310.260      1.019e+04      9.039e+03         TC_filter_PAH_3.3.dat
+         "PAH 3.3 ref"      3.35     1.554      1.358e+10      1.198e+10        306.440      7.676e+03      6.775e+03     TC_filter_PAH_3.3_ref.dat
+            "Br alpha"      4.05     5.714      4.576e+09      3.891e+09        209.685      1.665e+04      1.416e+04        TC_filter_Br_alpha.dat
+        "Br alpha ref"      4.07     6.283      4.450e+09      3.720e+09        212.271      1.811e+04      1.512e+04    TC_filter_Br_alpha_ref.dat
+         "CO(1-0)/ice"      4.67     6.470      1.987e+10      1.489e+10        164.282      4.333e+05      3.258e+05     TC_filter_CO(1-0)_ice.dat
+              "CO ref"      4.80     8.086      2.069e+10      1.485e+10        158.288      7.220e+05      5.172e+05          TC_filter_CO_ref.dat
+                  "N1"      8.66    33.938      3.541e+10      2.291e+10         51.361      1.637e+08      1.059e+08              TC_filter_N1.dat
+                  "N2"     11.50    43.996      3.958e+10      2.398e+10         30.072      5.513e+08      3.293e+08              TC_filter_N2.dat
+                  "N3"     12.26    82.096      1.434e+10      8.369e+09         25.990      2.779e+08      1.619e+08              TC_filter_N3.dat
+             "PAH 8.6"      8.60    64.302      9.811e+09      6.391e+09         51.551      4.496e+07      2.929e+07         TC_filter_PAH_8.6.dat
+         "PAH 8.6 ref"      9.10    78.500      6.868e+09      4.434e+09         46.459      3.578e+07      2.310e+07     TC_filter_PAH_8.6_ref.dat
+           "PAH 11.25"     11.20   133.252      3.666e+09      2.192e+09         30.819      4.081e+07      2.439e+07       TC_filter_PAH_11.25.dat
+       "PAH 11.25 ref"     11.90   162.972      2.957e+09      1.740e+09         27.484      4.352e+07      2.562e+07   TC_filter_PAH_11.25_ref.dat
+             "[Ne II]"     12.82   300.726      1.364e+09      7.876e+08         23.744      3.572e+07      2.062e+07           TC_filter_Ne_II.dat
+         "[Ne II] ref"     13.02   326.308      1.259e+09      7.263e+08         23.039      3.688e+07      2.127e+07       TC_filter_Ne_II_ref.dat
+              "[S IV]"     10.50   153.256      2.384e+09      1.535e+09         34.837      2.187e+07      1.408e+07            TC_filter_S_IV.dat
+          "[S IV] ref"     10.79   150.172      2.580e+09      1.612e+09         33.202      2.487e+07      1.554e+07        TC_filter_S_IV_ref.dat
