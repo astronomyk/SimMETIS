@@ -693,11 +693,13 @@ def get_filter_curve(filter_name):
     Acceptable filters can be found be calling get_filter_set()
     """
 
-    if filter_name not in get_filter_set(path=None):
-        raise ValueError("filter not recognised: " + filter_name)
-    #fname = os.path.join(__pkg_dir__, "data", "TC_filter_" + filter_name
-    #                     + ".dat")
-    fname = find_file("TC_filter_" + filter_name + ".dat")
+    fname = find_file(filter_name, sim.__search_path__)
+    if fname is None:
+        fname = find_file("TC_filter_" + filter_name + ".dat",
+                          sim.__search_path__)
+        if fname is None:
+            raise ValueError("filter not recognised: " + filter_name)
+
     return sc.TransmissionCurve(filename=fname)
 
 

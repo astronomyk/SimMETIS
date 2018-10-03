@@ -64,6 +64,8 @@ from astropy import constants as c
 from astropy.io import fits
 from astropy.io import ascii as ioascii  # 'ascii' redefines built-in
 
+import simmetis as sim
+from .utils import find_file
 #from .utils import __pkg_dir__    # not used
 
 __all__ = []
@@ -175,7 +177,8 @@ class TransmissionCurve(object):
 
         # test if it is a skycalc file
         elif self.params["filename"] is not None:
-            filename = self.params["filename"]
+            filename = find_file(self.params["filename"],
+                                 sim.__search_path__)
 
             if ".fits" in filename:
                 hdr = fits.getheader(filename)
@@ -197,7 +200,7 @@ class TransmissionCurve(object):
                                             airmass=self.params["airmass"])
 
             else:
-                data = ioascii.read(self.params["filename"])
+                data = ioascii.read(filename)
                 lam = data[data.colnames[0]]
                 val = data[data.colnames[1]]
         else:

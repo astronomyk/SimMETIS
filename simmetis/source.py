@@ -2404,10 +2404,12 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
 
     if isinstance(filter_name, TransmissionCurve):
         filt = filter_name
-    elif os.path.exists(filter_name):
-        filt = TransmissionCurve(filename=filter_name)
     else:
-        filt = get_filter_curve(filter_name)
+        fname = find_file(filter_name, sim.__search_path__)
+        if fname is not None:
+            filt = TransmissionCurve(filename=fname)
+        else:
+            filt = get_filter_curve(filter_name)
 
     # Rescale the spectra
     for i in range(len(curves)):
