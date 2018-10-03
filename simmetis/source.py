@@ -108,8 +108,8 @@ from astropy.convolution import convolve
 import astropy.units as u
 import astropy.constants as c
 
-import simmetis as sim
-from .spectral import TransmissionCurve, EmissionCurve, UnityCurve, BlackbodyCurve
+from .spectral import TransmissionCurve, EmissionCurve,\
+    UnityCurve, BlackbodyCurve
 from . import psf as sim_psf
 from . import utils
 from .utils import __pkg_dir__, find_file
@@ -1168,7 +1168,7 @@ def _get_stellar_properties(spec_type, cat=None, verbose=False):
     """
 
     if cat is None:
-        cat = ioascii.read(find_file("EC_all_stars.csv", sim.__search_path__))
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     if isinstance(spec_type, (list, tuple)):
         return [_get_stellar_properties(i, cat) for i in spec_type]
@@ -1273,7 +1273,7 @@ def _get_pickles_curve(spec_type, cat=None, verbose=False):
 
     """
     if cat is None:
-        cat = fits.getdata(find_file("EC_pickles.fits", sim.__search_path__))
+        cat = fits.getdata(find_file("EC_pickles.fits"))
 
     if isinstance(spec_type, (list, tuple)):
         return cat["lam"], [_get_pickles_curve(i, cat)[1] for i in spec_type]
@@ -1493,8 +1493,7 @@ def _get_refstar_curve(filename=None,mag=0):
     """
     ## TODO: Can we pre-select a star based on the instrument we're simulating?
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
-    data = ioascii.read(find_file("sirius_downsampled.txt",
-                                  sim.__search_path__))
+    data = ioascii.read(find_file("sirius_downsampled.txt"))
 
     mag_scale_factor = 10**(-mag/2.5)
 
@@ -1525,10 +1524,10 @@ def zero_magnitude_photon_flux(filter_name):
         vval = filter_name.val
 
     else:
-        fname = find_file(filter_name, sim.__search_path__, silent=True)
+        fname = find_file(filter_name, silent=True)
         if fname is None:
             fname = find_file("TC_filter_" + filter_name + ".dat",
-                              sim.__search_path__, silent=True)
+                              silent=True)
             if fname is None:
                 raise ValueError("Filter " + filter_name + "cannot be found")
 
@@ -1708,8 +1707,7 @@ def SED(spec_type, filter_name="V", magnitude=0.):
     if np.any([i in gal_seds for i in spec_type]):
         galflux = []
         for gal in spec_type:
-            data = ioascii.read(find_file("/data/SED_"+gal+".dat",
-                                          sim.__search_path__))
+            data = ioascii.read(find_file("/data/SED_"+gal+".dat"))
             galflux += [data[data.colnames[1]]]
             galflux = np.asarray(galflux)
         lam = data[data.colnames[0]]
@@ -1987,7 +1985,7 @@ def source_1E4_Msun_cluster(distance=50000, half_light_radius=1):
     """
     # IMF is a realisation of stellar masses drawn from an initial mass
     # function (TODO: which one?) summing to 1e4 M_sol.
-    fname = find_file("IMF_1E4.dat", sim.__search_path__)
+    fname = find_file("IMF_1E4.dat")
     imf = np.loadtxt(fname)
 
     # Assign stellar types to the masses in imf using list of average
@@ -2069,11 +2067,11 @@ def cluster(mass=1E3, distance=50000, half_light_radius=1):
     # IMF is a realisation of stellar masses drawn from an initial mass
     # function (TODO: which one?) summing to 1e4 M_sol.
     if mass <= 1E4:
-        fname = find_file("IMF_1E4.dat", sim.__search_path__)
+        fname = find_file("IMF_1E4.dat")
         imf = np.loadtxt(fname)
         imf = imf[0:int(mass/1E4 * len(imf))]
     elif mass > 1E4 and mass < 1E5:
-        fname = find_file("IMF_1E5.dat", sim.__search_path__)
+        fname = find_file("IMF_1E5.dat")
         imf = np.loadtxt(fname)
         imf = imf[0:int(mass/1E5 * len(imf))]
     else:
@@ -2405,7 +2403,7 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
     if isinstance(filter_name, TransmissionCurve):
         filt = filter_name
     else:
-        fname = find_file(filter_name, sim.__search_path__)
+        fname = find_file(filter_name)
         if fname is not None:
             filt = TransmissionCurve(filename=fname)
         else:
@@ -2582,7 +2580,7 @@ def get_lum_class_params(lum_class="V", cat=None):
     import astropy.table as tbl
 
     if cat is None:
-        cat = ioascii.read(find_file("EC_all_stars.csv", sim.__search_path__))
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     t = []
     for row in cat:
@@ -2631,7 +2629,7 @@ def get_nearest_spec_type(value, param="B-V", cat=None):
     """
 
     if cat is None:
-        cat = ioascii.read(find_file("EC_all_stars.csv", sim.__search_path__))
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     if isinstance(value, (np.ndarray, list, tuple)):
         spt = []

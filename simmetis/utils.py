@@ -602,7 +602,6 @@ def bug_report():
     packages = ["simmetis", "astropy", "numpy", "scipy", "poppy", "wget"]
 
     # Check Python version
-    import sys
     print("Python:\n", sys.version)
     print("")
 
@@ -639,14 +638,11 @@ def find_file(filename, path=None, silent=False):
     Returns
     -------
     Absolute path of the file
-'''
-    # Replace '.'
-    for i, trydir in enumerate(path):
-        if trydir == '.' or trydir == './':
-            path[i] = os.getcwd()
+    '''
+    import simmetis as sim
 
     if path is None:
-        path = [os.getcwd()]
+        path = sim.__search_path__
 
     if os.path.isabs(filename):
         # absolute path: only path to try

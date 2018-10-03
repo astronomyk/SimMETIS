@@ -64,9 +64,7 @@ from astropy import constants as c
 from astropy.io import fits
 from astropy.io import ascii as ioascii  # 'ascii' redefines built-in
 
-import simmetis as sim
 from .utils import find_file
-#from .utils import __pkg_dir__    # not used
 
 __all__ = []
 __all__ = ["TransmissionCurve", "EmissionCurve", "BlackbodyCurve", "UnityCurve",
@@ -177,8 +175,7 @@ class TransmissionCurve(object):
 
         # test if it is a skycalc file
         elif self.params["filename"] is not None:
-            filename = find_file(self.params["filename"],
-                                 sim.__search_path__)
+            filename = find_file(self.params["filename"])
 
             if ".fits" in filename:
                 hdr = fits.getheader(filename)

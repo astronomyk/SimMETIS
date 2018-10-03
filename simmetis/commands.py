@@ -414,7 +414,7 @@ class UserCommands(object):
             # TODO Can we have a list of reserved keywords?
             if "." in keyval and len(keyval.split(".")[-1]) > 1:
                 # look for the file
-                fname = find_file(keyval, sim.__search_path__, silent=True)
+                fname = find_file(keyval, silent=True)
                 if fname is None:
                     warnings.warn("Keyword "+key+" path doesn't exist: "
                                   + keyval)
@@ -429,24 +429,19 @@ class UserCommands(object):
 
         if isinstance(self.cmds["SCOPE_PSF_FILE"], str):
             if self.cmds["SCOPE_PSF_FILE"].lower() in ["ltao"]:
-                self.cmds["SCOPE_PSF_FILE"] = \
-                    find_file("PSF_LTAO.fits", sim.__search_path__)
+                self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_LTAO.fits")
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("default", "scao"):
-                self.cmds["SCOPE_PSF_FILE"] = \
-                    find_file("PSF_SCAO.fits", sim.__search_path__)
+                self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_SCAO.fits")
                 self.cmds["INST_USE_AO_MIRROR_BG"] = "no"
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("mcao", "maory"):
                 print("Unfortunately SimMETIS doesn't yet have a MCAO PSF")
                 print("Using the SCAO PSF instead")
-                self.cmds["SCOPE_PSF_FILE"] = \
-                    find_file("PSF_SCAO.fits", sim.__search_path__)
+                self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_SCAO.fits")
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("poppy", "ideal"):
-                self.cmds["SCOPE_PSF_FILE"] = \
-                    find_file("PSF_POPPY.fits", sim.__search_path__)
-            elif (find_file(self.cmds["SCOPE_PSF_FILE"], sim.__search_path__)
-                  is None):
-                raise ValueError("Cannot recognise PSF file name: " + \
-                                                    self.cmds["SCOPE_PSF_FILE"])
+                self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_POPPY.fits")
+            elif (find_file(self.cmds["SCOPE_PSF_FILE"]) is None):
+                raise ValueError("Cannot recognise PSF file name: " +
+                                 self.cmds["SCOPE_PSF_FILE"])
         elif isinstance(self.cmds["SCOPE_PSF_FILE"], PSFCube):
             pass
 
@@ -469,17 +464,17 @@ class UserCommands(object):
         # which detector chip to use
         if self.cmds["FPA_CHIP_LAYOUT"] in (None, "none", "default", "full"):
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout.dat", sim.__search_path__)
+                find_file("FPA_chip_layout.dat")
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "small":
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_small.dat", sim.__search_path__)
+                find_file("FPA_chip_layout_small.dat")
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "tiny":
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_tiny.dat", sim.__search_path__)
+                find_file("FPA_chip_layout_tiny.dat")
         elif self.cmds["FPA_CHIP_LAYOUT"].lower() in ("centre", "central",
                                                       "middle", "center"):
             self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_centre.dat", sim.__search_path__)
+                find_file("FPA_chip_layout_centre.dat")
 
 
 
@@ -511,12 +506,12 @@ class UserCommands(object):
         # Check for a filter curve file or a standard broadband name
         if isinstance(self.cmds["INST_FILTER_TC"], str):
 
-            fname = find_file(self.cmds["INST_FILTER_TC"], sim.__search_path__)
+            fname = find_file(self.cmds["INST_FILTER_TC"])
 
             if fname is None:
                 # try the name of the filter
                 tryname = "TC_filter_" + self.cmds["INST_FILTER_TC"] + ".dat"
-                fname = find_file(tryname, sim.__search_path__)
+                fname = find_file(tryname)
                 if fname is None:
                     raise ValueError("Filter " + self.cmds["INST_FILTER_TC"] +
                                      "could not be found")
@@ -761,7 +756,7 @@ def dump_chip_layout(path=None):
     path : str, optional
         path where the chip layout file is to be saved
     """
-    fname = find_file("FPA_chip_layout.dat", sim.__search_path__)
+    fname = find_file("FPA_chip_layout.dat")
 
     if path is None:
         f = open(fname, "r")
@@ -788,10 +783,10 @@ def dump_mirror_config(path=None, what="scope"):
 
     if what.lower() == "scope":
         print("Dumping telescope mirror configuration.")
-        fname = find_file("EC_mirrors_scope.tbl", sim.__search_path__)
+        fname = find_file("EC_mirrors_scope.tbl")
     elif what.lower() == "ao":
         print("Dumping AO mirror configuration.")
-        fname = find_file("EC_mirrors_ao.tbl", sim.__search_path__)
+        fname = find_file("EC_mirrors_ao.tbl")
 
     if path is None:
         f = open(fname, "r")

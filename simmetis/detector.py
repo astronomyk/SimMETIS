@@ -101,8 +101,7 @@ from astropy.wcs import WCS
 
 #from astropy.stats.funcs import median_absolute_deviation as mad
 
-import simmetis as sim
-from .utils import __pkg_dir__, find_file
+from .utils import find_file
 
 from . import spectral as sc
 from . import commands
@@ -1409,7 +1408,7 @@ def install_noise_cube(n=9):
     if sys.version_info.major >= 3:
         print("WARNING - this process can take up to 10 minutes. Fear not!")
         hdu = make_noise_cube(n, filename=None)
-        filename = find_file("FPA_noise.fits", sim.__search_path__)
+        filename = find_file("FPA_noise.fits")
         hdu.writeto(filename, overwrite=True, checksum=True)
         print("Saved noise cube with", n, "layers to the package directory:")
         print(filename)
