@@ -63,10 +63,12 @@ def setup_package():
     setup(name = 'SimMETIS',
           version = VERSION,
           description = "METIS Instrument simulator",
-          author = "Kieran Leschinski, Oliver Czoske",
+          author = "Kieran Leschinski, Oliver Czoske, Leonard Burtscher, Roy van Boekel",
           author_email = """kieran.leschinski@unive.ac.at,
-                            oliver.czoske@univie.ac.at""",
-          url = "http://homepage.univie.ac.at/kieran.leschinski/",
+                            oliver.czoske@univie.ac.at,
+                            burtscher@strw.leidenuniv.nl
+                            boekel@mpia.de""",
+          url = "http://metis.strw.leidenuniv.nl/wiki/doku.php?id=sim:simulator",
           package_dir={'simmetis': 'simmetis'},
           packages=['simmetis', 'simmetis.tests', 'simmetis.sandbox'],
           # for some reason include_package_data can be temperamental
