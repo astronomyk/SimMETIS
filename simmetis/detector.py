@@ -45,8 +45,8 @@ Examples
 The :class:`.Detector` can be used in stand-alone mode. In this case it outputs
 only the noise that a sealed-off detector would generate:
 
-    >>> import simcado
-    >>> fpa = simcado.Detector(simcado.UserCommands())
+    >>> import simmetis
+    >>> fpa = simmetis.Detector(simmetis.UserCommands())
     >>> fpa.read_out(output=True, chips=[0])
 
 
@@ -59,10 +59,10 @@ Astropy ``HDUList``. The ``HDUList`` is then written to disk.
 
     >>> # Create a set of commands, optical train and detector
     >>>
-    >>> import simcado
-    >>> cmds = simcado.UserCommands()
-    >>> opt_train = simcado.OpticalTrain(cmds)
-    >>> fpa = simcado.Detector(cmds)
+    >>> import simmetis as sim
+    >>> cmds = sim.UserCommands()
+    >>> opt_train = sim.OpticalTrain(cmds)
+    >>> fpa = sim.Detector(cmds)
     >>>
     >>> # Pass photons from a 10^4 Msun open cluster in the LMC through to the detector
     >>>
@@ -101,7 +101,7 @@ from astropy.wcs import WCS
 
 #from astropy.stats.funcs import median_absolute_deviation as mad
 
-from .utils import __pkg_dir__
+from .utils import find_file
 
 from . import spectral as sc
 from . import commands
@@ -181,9 +181,9 @@ class Detector(object):
     Create a :class:`Detector` object
     ::
 
-        >>> import simcado
-        >>> my_cmds = simcado.UserCommands()
-        >>> my_detector = simcado.Detector(my_cmds)
+        >>> import simmetis as sim
+        >>> my_cmds = sim.UserCommands()
+        >>> my_detector = sim.Detector(my_cmds)
 
 
     Read out only the first :class:`.Chip`
@@ -367,7 +367,7 @@ class Detector(object):
                                            read_out_type=read_out_type)
 
             ## TODO: transpose is just a hack - need to make sure
-            ##       x and y are handled correctly throughout SimCADO
+            ##       x and y are handled correctly throughout SimMETIS
             thishdu = fits.ImageHDU(array.T)
 
             thishdu.header["EXTNAME"] = ("CHIP_{:02d}".format(self.chips[i].id),
@@ -454,7 +454,7 @@ class Detector(object):
         hdu.header["PIX_RES"] = self.pix_res
         hdu.header["EXPTIME"] = self.exptime
         hdu.header["GAIN"]    = self.params["FPA_GAIN"]
-        hdu.header["SIMCADO"] = "FPA_NOISE"
+        hdu.header["SIMMETIS"] = "FPA_NOISE"
 
         try:
             hdu.writeto(filename, clobber=True, checksum=True)
@@ -760,7 +760,7 @@ class Chip(object):
 
         Parameters
         ----------
-        cmds : simcado.UserCommands
+        cmds : simmetis.UserCommands
             Commands for how to read out the chip
 
         Returns
@@ -941,12 +941,12 @@ class Chip(object):
         """
         Superfast read-out
         """
-        
+
         print(np.sum(self.array)*dit, np.min(self.array), np.max(self.array), np.median(self.array))
         signal = self._read_out_poisson(self.array, dit, ndit)
         print(np.sum(signal), np.min(signal), np.max(signal), np.median(signal))
 
-        
+
         # apply the linearity curve
         lin_curve = cmds["FPA_LINEARITY_CURVE"]
         if lin_curve is not None:
@@ -992,7 +992,7 @@ class Chip(object):
 #        image2[image2 > 2.14E9] = 2.14E9
 
         im_st = np.zeros(np.shape(image))
-        for n in range(ndit):
+        for _ in range(ndit):
             im_st += np.random.poisson(image2)
 
         return im_st.astype(np.float32)
@@ -1156,7 +1156,7 @@ class Chip(object):
 
 
 
-
+# TODO this ought to be renamed (redefined-builtin)
 def open(self, filename):
     """
     Opens a saved ``Detector`` file.
@@ -1178,7 +1178,7 @@ def open(self, filename):
 
     Returns
     -------
-    ``simcado.Detector`` object
+    ``simmetis.Detector`` object
 
     Examples
     --------
@@ -1215,7 +1215,7 @@ def plot_detector_layout(detector, plane="sky", clr='g-', plot_origin=False):
 
     from matplotlib import pyplot as plt
     npts = 101
-    for i, chip in enumerate(detector.chips):
+    for chip in detector.chips:
 
         if plane == 'sky':
             thewcs = chip.wcs
@@ -1268,7 +1268,7 @@ def plot_detector(detector):
 
     Parameters
     ----------
-    detector : simcado.Detector
+    detector : simmetis.Detector
         The detector object to be shown
     """
 
@@ -1306,7 +1306,7 @@ def generate_hxrg_noise(cmds):
 
     Parameters
     ----------
-    cmds : simcado.UserCommands
+    cmds : simmetis.UserCommands
 
     """
 
@@ -1408,7 +1408,7 @@ def install_noise_cube(n=9):
     if sys.version_info.major >= 3:
         print("WARNING - this process can take up to 10 minutes. Fear not!")
         hdu = make_noise_cube(n, filename=None)
-        filename = os.path.join(__pkg_dir__, "data", "FPA_noise.fits")
+        filename = find_file("FPA_noise.fits")
         hdu.writeto(filename, overwrite=True, checksum=True)
         print("Saved noise cube with", n, "layers to the package directory:")
         print(filename)

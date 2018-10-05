@@ -1,5 +1,5 @@
 """
-A bunch of helper functions to generate galaxies in SimCADO
+A bunch of helper functions to generate galaxies in SimMETIS
 """
 
 import scipy.ndimage as spi
@@ -146,7 +146,7 @@ def apply_grav_lens(image, x_cen=0, y_cen=0, r_einstein=None, eccentricity=1,
     i = (x-xg + nx//2).astype(int)
     j = (y-yg + ny//2).astype(int)
 
-    lensed_image = shifted_image[j.flatten(), 
+    lensed_image = shifted_image[j.flatten(),
                                  i.flatten()].reshape(shifted_image.shape)
 
     return lensed_image
@@ -177,7 +177,7 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
 
     filter_name : str, TransmissionCurve, optional
         Default is "Ks". Values can be either:
-        - the name of a SimCADO filter : see optics.get_filter_set()
+        - the name of a SimMETIS filter : see optics.get_filter_set()
         - or a TransmissionCurve containing a user-defined filter
 
     normalization : str, optional
@@ -185,13 +185,13 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
         If normalization equals:
         - "half-light" : the pixels at the half-light radius have a surface
                          brightness of ``magnitude`` [mag/arcsec2]
-        - "centre" : the maximum pixels have a surface brightness of 
+        - "centre" : the maximum pixels have a surface brightness of
                      ``magnitude`` [mag/arcsec2]
         - "total" : the whole image has a brightness of ``magnitude`` [mag]
 
     spectrum : str, EmissionCurve, optional
         The spectrum to be associated with the galaxy. Values can either be:
-        - the name of a SimCADO SED spectrum : see get_SED_names()
+        - the name of a SimMETIS SED spectrum : see get_SED_names()
         - an EmissionCurve with a user defined spectrum
 
 
@@ -213,7 +213,7 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
 
     Returns
     -------
-    galaxy_src : simcado.Source
+    galaxy_src : simmetis.Source
 
 
     See Also
@@ -349,7 +349,7 @@ def sersic_profile(r_eff=100, n=4, ellipticity=0.5, angle=30,
 
 def spiral_profile(r_eff, ellipticity=0.5, angle=45,
                    n_arms=2, tightness=4., arms_width=0.1, central_brightness=10,
-                   normalization='total', width=1024, height=1024, oversample=1, 
+                   normalization='total', width=1024, height=1024, oversample=1,
                    **kwargs):
     """
     Creates a spiral profile with arbitary parameters
@@ -411,7 +411,7 @@ def spiral_profile(r_eff, ellipticity=0.5, angle=45,
     Notes
     -----
     The intensity drop-off is dictated by a sersic profile of with indes n=1,
-    i.e. an exponential drop-off. This can be altered by passing the keyword 
+    i.e. an exponential drop-off. This can be altered by passing the keyword
     "n=" as an optional parameter.
 
     Spiral structure taken from here:
@@ -429,7 +429,7 @@ def spiral_profile(r_eff, ellipticity=0.5, angle=45,
         raise ValueError("ellipticiy <= 1 . This is physically meaningless")
 
     # create a spiral
-    xx, yy = np.meshgrid(np.arange(-width/2, width/2), 
+    xx, yy = np.meshgrid(np.arange(-width/2, width/2),
                          np.arange(-height/2, height/2))
     r = np.sqrt(abs(xx)**2 + abs(yy)**2)
 
@@ -483,21 +483,21 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     filter_name : str, TransmissionCurve, optional
         Default is "Ks". Values can be either:
-        - the name of a SimCADO filter : see optics.get_filter_set()
+        - the name of a SimMETIS filter : see optics.get_filter_set()
         - or a TransmissionCurve containing a user-defined filter
 
     normalization : str, optional
         ["half-light", "centre", "total"] Where in the profile equals unityy
         If normalization equals:
-        - "half-light" : the pixels at the half-light radius have a surface 
+        - "half-light" : the pixels at the half-light radius have a surface
                          brightness of ``magnitude`` [mag/arcsec2]
-        - "centre" : the maximum pixels have a surface brightness of 
+        - "centre" : the maximum pixels have a surface brightness of
                      ``magnitude`` [mag/arcsec2]
         - "total" : the whole image has a brightness of ``magnitude`` [mag]
 
     spectrum : str, EmissionCurve, optional
         The spectrum to be associated with the galaxy. Values can either be:
-        - the name of a SimCADO SED spectrum : see get_SED_names()
+        - the name of a SimMETIS SED spectrum : see get_SED_names()
         - an EmissionCurve with a user defined spectrum
 
 
@@ -529,7 +529,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     Returns
     -------
-    galaxy_src : simcado.Source
+    galaxy_src : simmetis.Source
 
 
     See Also
@@ -575,7 +575,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
                           width        =spiral.shape[1],
                           height       =spiral.shape[0])
 
-    thresh = np.max((disk[0,:].max(), disk[-1,:].max(), 
+    thresh = np.max((disk[0,:].max(), disk[-1,:].max(),
                      disk[:,0].max(), disk[:,-1].max()))
     disk[disk < thresh] = 0
 

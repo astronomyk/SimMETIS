@@ -64,7 +64,7 @@ from astropy import constants as c
 from astropy.io import fits
 from astropy.io import ascii as ioascii  # 'ascii' redefines built-in
 
-#from .utils import __pkg_dir__    # not used
+from .utils import find_file
 
 __all__ = []
 __all__ = ["TransmissionCurve", "EmissionCurve", "BlackbodyCurve", "UnityCurve",
@@ -175,7 +175,7 @@ class TransmissionCurve(object):
 
         # test if it is a skycalc file
         elif self.params["filename"] is not None:
-            filename = self.params["filename"]
+            filename = find_file(self.params["filename"])
 
             if ".fits" in filename:
                 hdr = fits.getheader(filename)
@@ -197,7 +197,7 @@ class TransmissionCurve(object):
                                             airmass=self.params["airmass"])
 
             else:
-                data = ioascii.read(self.params["filename"])
+                data = ioascii.read(filename)
                 lam = data[data.colnames[0]]
                 val = data[data.colnames[1]]
         else:
@@ -467,7 +467,7 @@ class EmissionCurve(TransmissionCurve):
     --------
     ::
 
-        >>> from simcado.spectral import EmissionCurve
+        >>> from simmetis.spectral import EmissionCurve
         >>>
         >>> ec_1 = EmissionCurve("emission_curve.dat")
         >>> lam = np.arange(0.7, 1.5, 0.05)

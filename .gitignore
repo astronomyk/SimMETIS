@@ -21,6 +21,7 @@ MANIFEST
 
 # log files
 simcado.log
+simmetis.log
 .ipynb_checkpoints/
 Untitled.ipynb
 version.py

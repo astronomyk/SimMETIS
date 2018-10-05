@@ -108,10 +108,11 @@ from astropy.convolution import convolve
 import astropy.units as u
 import astropy.constants as c
 
-from .spectral import TransmissionCurve, EmissionCurve, UnityCurve, BlackbodyCurve
+from .spectral import TransmissionCurve, EmissionCurve,\
+    UnityCurve, BlackbodyCurve
 from . import psf as sim_psf
 from . import utils
-from .utils import __pkg_dir__
+from .utils import __pkg_dir__, find_file
 
 __all__ = ["Source",
            "star", "stars", "cluster",
@@ -154,7 +155,7 @@ class Source(object):
     filename : str
         FITS file that contains either a previously saved ``Source`` object or a
         data cube with dimensions x, y, lambda. A ``Source`` object is
-        identified by the header keyword SIMCADO with value SOURCE.
+        identified by the header keyword SIMMETIS with value SOURCE.
 
     or
 
@@ -233,12 +234,12 @@ class Source(object):
         self.y = None  # set later
 
         # A file can contain a previously saved Source object; in this case the header keyword
-        # "SIMCADO" is set to "SOURCE". If this is not the case, we assume that the file
+        # "SIMMETIS" is set to "SOURCE". If this is not the case, we assume that the file
         # contains a data cube with dimensions x, y, lambda.
         # If no filename is given, we build the Source from the arrays.
         if filename is not None:
             hdr = fits.getheader(filename)
-            if "SIMCADO" in hdr.keys() and hdr["SIMCADO"] == "SOURCE":
+            if "SIMMETIS" in hdr.keys() and hdr["SIMMETIS"] == "SOURCE":
                 self.read(filename)
             else:
                 self._from_cube(filename)
@@ -278,10 +279,10 @@ class Source(object):
 
         Parameters
         ----------
-        opt_train : simcado.OpticalTrain
+        opt_train : simmetis.OpticalTrain
             the object containing all information on what is to happen to the
             photons as they travel from the source to the detector
-        detector : simcado.Detector
+        detector : simmetis.Detector
             the object representing the detector
         chips : int, str, list, optional
             The IDs of the chips to be readout. "all" is also acceptable
@@ -664,7 +665,7 @@ class Source(object):
         """
         Scale a certain spectrum to a certain magnitude
 
-        See :func:`simcado.source.scale_spectrum` for examples
+        See :func:`simmetis.source.scale_spectrum` for examples
 
         Parameters
         ----------
@@ -674,9 +675,9 @@ class Source(object):
         mag : float
             [mag] new magnitude of spectrum
         filter_name : str, TransmissionCurve
-           Any filter name from SimCADO or a
-           :class:`~.simcado.spectral.TransmissionCurve` object
-           (see :func:`~.simcado.optics.get_filter_set`)
+           Any filter name from SimMETIS or a
+           :class:`~.simmetis.spectral.TransmissionCurve` object
+           (see :func:`~.simmetis.optics.get_filter_set`)
         """
 
         self.lam, self.spectra[idx] = scale_spectrum(lam=self.lam,
@@ -711,7 +712,7 @@ class Source(object):
         --------
         ::
 
-            >>> from simcado.source import cluster
+            >>> from simmetis.source import cluster
             >>>
             >>> curr_dist = 50000  # pc, i.e. LMC
             >>> new_dist = 770000  # pc, i.e. M31
@@ -898,7 +899,7 @@ class Source(object):
         xyHDU.header["CUNIT1"] = self.params["pix_unit"]
         xyHDU.header["CUNIT2"] = self.params["pix_unit"]
 
-        xyHDU.header["SIMCADO"] = "SOURCE"
+        xyHDU.header["SIMMETIS"] = "SOURCE"
 
         specHDU = fits.ImageHDU(self.spectra)
         specHDU.header["CRVAL1"] = self.lam[0]
@@ -929,7 +930,7 @@ class Source(object):
 
         See Also
         --------
-        :class:`simcado.spectral.TransmissionCurve`
+        :class:`simmetis.spectral.TransmissionCurve`
 
         """
         tc = deepcopy(transmission_curve)
@@ -1167,8 +1168,7 @@ def _get_stellar_properties(spec_type, cat=None, verbose=False):
     """
 
     if cat is None:
-        cat = ioascii.read(os.path.join(__pkg_dir__, "data",
-                                        "EC_all_stars.csv"))
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     if isinstance(spec_type, (list, tuple)):
         return [_get_stellar_properties(i, cat) for i in spec_type]
@@ -1273,7 +1273,7 @@ def _get_pickles_curve(spec_type, cat=None, verbose=False):
 
     """
     if cat is None:
-        cat = fits.getdata(os.path.join(__pkg_dir__, "data", "EC_pickles.fits"))
+        cat = fits.getdata(find_file("EC_pickles.fits"))
 
     if isinstance(spec_type, (list, tuple)):
         return cat["lam"], [_get_pickles_curve(i, cat)[1] for i in spec_type]
@@ -1417,7 +1417,7 @@ def BV_to_spec_type(B_V):
 
     """
 
-    #from simcado.source import _get_stellar_properties
+    #from simmetis.source import _get_stellar_properties
 
     spec_type = [spt+str(i)+"V" for spt in "OBAFGKM" for i in range(10)]
     B_V_int = np.array([spt["B-V"] for spt in _get_stellar_properties(spec_type)])
@@ -1437,7 +1437,7 @@ def mag_to_photons(filter_name, magnitude=0):
     Parameters
     ----------
     filter_name : str
-        filter name. See simcado.optics.get_filter_set()
+        filter name. See simmetis.optics.get_filter_set()
     magnitude : float
         [mag] the source brightness
 
@@ -1450,7 +1450,7 @@ def mag_to_photons(filter_name, magnitude=0):
     --------
     :func:`.photons_to_mag`
     :func:`.zero_magnitude_photon_flux`,
-    :func:`simcado.optics.get_filter_set`
+    :func:`simmetis.optics.get_filter_set`
     """
 
     flux_0 = zero_magnitude_photon_flux(filter_name)
@@ -1465,7 +1465,7 @@ def photons_to_mag(filter_name, photons=1):
     Parameters
     ----------
     filter_name : str
-        filter name. See simcado.optics.get_filter_set()
+        filter name. See simmetis.optics.get_filter_set()
     photons : float
         [ph/s/m2] the integrated photon flux for the filter
 
@@ -1478,7 +1478,7 @@ def photons_to_mag(filter_name, photons=1):
     --------
     :func:`.photons_to_mag`
     :func:`.zero_magnitude_photon_flux`,
-    :func:`simcado.optics.get_filter_set`
+    :func:`simmetis.optics.get_filter_set`
 
     """
 
@@ -1492,10 +1492,8 @@ def _get_refstar_curve(filename=None,mag=0):
     """
     """
     ## TODO: Can we pre-select a star based on the instrument we're simulating?
-    ##       Do we need more flexibility in the path?
     #data = ioascii.read(os.path.join(__pkg_dir__, "data", "vega.dat"))
-    data = ioascii.read(os.path.join(__pkg_dir__, "data",
-                                     "sirius_downsampled.txt"))
+    data = ioascii.read(find_file("sirius_downsampled.txt"))
 
     mag_scale_factor = 10**(-mag/2.5)
 
@@ -1514,7 +1512,7 @@ def zero_magnitude_photon_flux(filter_name):
     Parameters
     ----------
     filter_name : str
-        filter name. See simcado.optics.get_filter_set()
+        filter name. See simmetis.optics.get_filter_set()
 
     Notes
     -----
@@ -1526,16 +1524,12 @@ def zero_magnitude_photon_flux(filter_name):
         vval = filter_name.val
 
     else:
-        if os.path.exists(filter_name):
-            fname = filter_name
-        elif os.path.exists(os.path.join(__pkg_dir__, "data", filter_name)):
-            fname = os.path.join(__pkg_dir__, "data", filter_name)
-        elif os.path.join(__pkg_dir__, "data",
-                                 "TC_filter_" + filter_name + ".dat"):
-            fname = os.path.join(__pkg_dir__, "data",
-                                 "TC_filter_" + filter_name + ".dat")
-        else:
-                raise ValueError("File " + fname + " does not exist")
+        fname = find_file(filter_name, silent=True)
+        if fname is None:
+            fname = find_file("TC_filter_" + filter_name + ".dat",
+                              silent=True)
+            if fname is None:
+                raise ValueError("Filter " + filter_name + "cannot be found")
 
         vraw = ioascii.read(fname)
         vlam = vraw[vraw.colnames[0]]
@@ -1588,7 +1582,7 @@ def get_SED_names(path=None):
     Return a list of the SEDs installed in the package directory
 
     Looks for files that follow the naming convention ``SED_<name>.dat``.
-    For example, SimCADO contains an SED for an elliptical galaxy named
+    For example, SimMETIS contains an SED for an elliptical galaxy named
     ``SED_elliptical.dat``
 
     Parameters
@@ -1606,7 +1600,7 @@ def get_SED_names(path=None):
     Names returned here can be used with the function :func:`.SED` to call up
     ::
 
-        >>> from simcado import SED, get_SED_names
+        >>> from simmetis import SED, get_SED_names
         >>> print(get_SED_names())
         ['elliptical', 'interacting', 'spiral', 'starburst', 'ulirg']
         >>> SED("spiral")
@@ -1647,7 +1641,7 @@ def SED(spec_type, filter_name="V", magnitude=0.):
         The spectral type of the star(s) - from the Pickles 1998 catalogue
         The names of a galaxy spectrum - see get_SED_names()
     filter_name : str, optional
-        Default is "V". Any filter in the simcado/data directory can be used,
+        Default is "V". Any filter in the simmetis/data directory can be used,
         or the user can specify a file path to an ASCII file for the filter
     magnitude : float, list, optional
         Apparent magnitude of the star. Default is 0.
@@ -1665,7 +1659,7 @@ def SED(spec_type, filter_name="V", magnitude=0.):
 
     Get the SED and the wavelength bins for a J=0 A0V star
 
-        >>> from simcado.source import SED
+        >>> from simmetis.source import SED
         >>> lam, spec = SED("A0V", "J", 0)
 
     Get the SED for a generic starburst galaxy
@@ -1678,7 +1672,7 @@ def SED(spec_type, filter_name="V", magnitude=0.):
         :include-source:
 
         import matplotlib.pyplot as plt
-        from simcado.source import SED
+        from simmetis.source import SED
 
         lam, spec = SED(spec_type=["A0V", "G2V"],
                             filter_name="PaBeta",
@@ -1713,7 +1707,7 @@ def SED(spec_type, filter_name="V", magnitude=0.):
     if np.any([i in gal_seds for i in spec_type]):
         galflux = []
         for gal in spec_type:
-            data = ioascii.read(__pkg_dir__+"/data/SED_"+gal+".dat")
+            data = ioascii.read(find_file("/data/SED_"+gal+".dat"))
             galflux += [data[data.colnames[1]]]
             galflux = np.asarray(galflux)
         lam = data[data.colnames[0]]
@@ -1758,8 +1752,8 @@ def star_grid(n, mag_min, mag_max, filter_name="Ks", separation=1,
         [vega mag] the minimum (brightest) and maximum (faintest) magnitudes for
         stars in the grid
     filter_name : str
-        any filter that is in the SimCADO package directory.
-        See ``simcado.optics.get_filter_set()``
+        any filter that is in the SimMETIS package directory.
+        See ``simmetis.optics.get_filter_set()``
     separation : float, optional
         [arcsec] an average speration between the stars in the grid can be
         specified. Default is 1 arcsec
@@ -1768,7 +1762,7 @@ def star_grid(n, mag_min, mag_max, filter_name="Ks", separation=1,
 
     Returns
     -------
-    source : ``simcado.Source``
+    source : ``simmetis.Source``
 
     Notes
     -----
@@ -1813,9 +1807,9 @@ def star_grid(n, mag_min, mag_max, filter_name="Ks", separation=1,
 
 def star(spec_type="A0V", mag=0, filter_name="Ks", x=0, y=0, **kwargs):
     """
-    Creates a simcado.Source object for a star with a given magnitude
+    Creates a simmetis.Source object for a star with a given magnitude
 
-    This is just the single star variant for ``simcado.source.stars()``
+    This is just the single star variant for ``simmetis.source.stars()``
 
     Parameters
     ----------
@@ -1825,14 +1819,14 @@ def star(spec_type="A0V", mag=0, filter_name="Ks", x=0, y=0, **kwargs):
         magnitude of star
     filter_name : str
         Filter in which the magnitude is given. Can be the name of any filter
-        curve file in the simcado/data folder, or a path to a custom ASCII file
+        curve file in the simmetis/data folder, or a path to a custom ASCII file
     x, y : float, int, optional
         [arcsec] the x,y position of the star on the focal plane
 
 
     Keyword arguments
     -----------------
-    Passed to the ``simcado.Source`` object. See the docstring for this object.
+    Passed to the ``simmetis.Source`` object. See the docstring for this object.
 
     pix_unit : str
         Default is "arcsec". Acceptable are "arcsec", "arcmin", "deg", "pixel"
@@ -1842,7 +1836,7 @@ def star(spec_type="A0V", mag=0, filter_name="Ks", x=0, y=0, **kwargs):
 
     Returns
     -------
-    source : ``simcado.Source``
+    source : ``simmetis.Source``
 
     See Also
     --------
@@ -1857,7 +1851,7 @@ def star(spec_type="A0V", mag=0, filter_name="Ks", x=0, y=0, **kwargs):
 def stars(spec_types=("A0V"), mags=(0), filter_name="Ks",
           x=None, y=None, **kwargs):
     """
-    Creates a simcado.Source object for a bunch of stars.
+    Creates a simmetis.Source object for a bunch of stars.
 
     Parameters
     ----------
@@ -1868,14 +1862,14 @@ def stars(spec_types=("A0V"), mags=(0), filter_name="Ks",
         [mag] magnitudes of the stars.
     filter_name : str,
         Filter in which the magnitude is given. Can be the name of any filter
-        curve file in the simcado/data folder, or a path to a custom ASCII file
+        curve file in the simmetis/data folder, or a path to a custom ASCII file
     x, y : arrays
         [arcsec] x and y coordinates of the stars on the focal plane
 
 
     Keyword arguments
     -----------------
-    Passed to the ``simcado.Source`` object. See the docstring for this object.
+    Passed to the ``simmetis.Source`` object. See the docstring for this object.
 
     pix_unit : str
         Default is "arcsec". Acceptable are "arcsec", "arcmin", "deg", "pixel"
@@ -1885,7 +1879,7 @@ def stars(spec_types=("A0V"), mags=(0), filter_name="Ks",
 
     Returns
     -------
-    source : ``simcado.Source``
+    source : ``simmetis.Source``
 
 
     Examples
@@ -1894,7 +1888,7 @@ def stars(spec_types=("A0V"), mags=(0), filter_name="Ks",
     Create a ``Source`` object for a random group of stars
 
         >>> import numpy as np
-        >>> from simcado.source import stars
+        >>> from simmetis.source import stars
         >>>
         >>> spec_types = ["A0V", "G2V", "K0III", "M5III", "O8I"]
         >>> ids = np.random.randint(0,5, size=100)
@@ -1982,7 +1976,7 @@ def source_1E4_Msun_cluster(distance=50000, half_light_radius=1):
 
     Returns
     -------
-    src : simcado.Source
+    src : simmetis.Source
 
     See Also
     --------
@@ -1991,7 +1985,7 @@ def source_1E4_Msun_cluster(distance=50000, half_light_radius=1):
     """
     # IMF is a realisation of stellar masses drawn from an initial mass
     # function (TODO: which one?) summing to 1e4 M_sol.
-    fname = os.path.join(__pkg_dir__, "data", "IMF_1E4.dat")
+    fname = find_file("IMF_1E4.dat")
     imf = np.loadtxt(fname)
 
     # Assign stellar types to the masses in imf using list of average
@@ -2057,7 +2051,7 @@ def cluster(mass=1E3, distance=50000, half_light_radius=1):
 
     Returns
     -------
-    src : simcado.Source
+    src : simmetis.Source
 
     Examples
     --------
@@ -2065,7 +2059,7 @@ def cluster(mass=1E3, distance=50000, half_light_radius=1):
     Create a ``Source`` object for a young open cluster with half light radius
     of around 0.2 pc at the galactic centre and 100 solar masses worth of stars:
 
-        >>> from simcado.source import cluster
+        >>> from simmetis.source import cluster
         >>> src = cluster(mass=100, distance=8500, half_light_radius=0.2)
 
 
@@ -2073,11 +2067,11 @@ def cluster(mass=1E3, distance=50000, half_light_radius=1):
     # IMF is a realisation of stellar masses drawn from an initial mass
     # function (TODO: which one?) summing to 1e4 M_sol.
     if mass <= 1E4:
-        fname = os.path.join(__pkg_dir__, "data", "IMF_1E4.dat")
+        fname = find_file("IMF_1E4.dat")
         imf = np.loadtxt(fname)
         imf = imf[0:int(mass/1E4 * len(imf))]
     elif mass > 1E4 and mass < 1E5:
-        fname = os.path.join(__pkg_dir__, "data", "IMF_1E5.dat")
+        fname = find_file("IMF_1E5.dat")
         imf = np.loadtxt(fname)
         imf = imf[0:int(mass/1E5 * len(imf))]
     else:
@@ -2181,7 +2175,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
 
     Keyword arguments
     -----------------
-    Passed to the ``simcado.Source`` object. See the docstring for this object.
+    Passed to the ``simmetis.Source`` object. See the docstring for this object.
 
     pix_unit : str
         Default is "arcsec". Acceptable are "arcsec", "arcmin", "deg", "pixel"
@@ -2203,7 +2197,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
     will assign a generic elliptical galaxy spectrum to the image.
 
         >>> from astropy.io import fits
-        >>> from simcado.source import SED, source_from_image
+        >>> from simmetis.source import SED, source_from_image
 
         >>> im = fits.getdata("galaxy.fits")
         >>> lam, spec = SED("elliptical")
@@ -2213,7 +2207,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
     **Note** Here we have assumed that the plate scale of the image is the same
     as the MICADO wide-field mode, i.e. 0.004 arcseconds. If the image is from a
     real observation, or it was generated with a different pixel scale, we will
-    need to tell SimCADO about this:
+    need to tell SimMETIS about this:
 
         >>> src = source_from_image(im, lam, spec,
                                     plate_scale=0.01,
@@ -2221,7 +2215,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
 
     If the image is from real observations, chances are good that the background
     flux is higher than zero. We can set a ``threshold`` in order to tell
-    SimCADO to ignore all pixel with values below the background level:
+    SimMETIS to ignore all pixel with values below the background level:
 
         >>> src = source_from_image(im, lam, spec,
                                     plate_scale=0.01,
@@ -2321,11 +2315,11 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
     mag : float
         magnitude of the source
     filter_name : str, TransmissionCurve, optional
-           Any filter name from SimCADO or a
-           :class:`~.simcado.spectral.TransmissionCurve` object
-           (see :func:`~.simcado.optics.get_filter_set`)
+           Any filter name from SimMETIS or a
+           :class:`~.simmetis.spectral.TransmissionCurve` object
+           (see :func:`~.simmetis.optics.get_filter_set`)
     return_ec : bool, optional
-        If True, a :class:`simcado.spectral.EmissionCurve` object is returned.
+        If True, a :class:`simmetis.spectral.EmissionCurve` object is returned.
         Default is False
 
     Returns
@@ -2335,27 +2329,27 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
     spec : np.ndarray
         [ph/s/m2] The spectrum scaled to the specified magnitude
 
-    If return_ec == True, a :class:`simcado.spectral.EmissionCurve` is returned
+    If return_ec == True, a :class:`simmetis.spectral.EmissionCurve` is returned
 
     See Also
     --------
-    :class:`simcado.spectral.TransmissionCurve`,
-    :func:`simcado.optics.get_filter_curve`,
-    :func:`simcado.optics.get_filter_set`,
-    :func:`simcado.source.SED`,
-    :func:`simcado.source.stars`
+    :class:`simmetis.spectral.TransmissionCurve`,
+    :func:`simmetis.optics.get_filter_curve`,
+    :func:`simmetis.optics.get_filter_set`,
+    :func:`simmetis.source.SED`,
+    :func:`simmetis.source.stars`
 
     Examples
     --------
 
     Scale the spectrum of a G2V star to J=25:
 
-        >>> lam, spec = simcado.source.SED("G2V")
-        >>> lam, spec = simcado.source.scale_spectrum(lam, spec, 25, "J")
+        >>> lam, spec = simmetis.source.SED("G2V")
+        >>> lam, spec = simmetis.source.scale_spectrum(lam, spec, 25, "J")
 
     Scale the spectra for many stars to different H-band magnitudes:
 
-        >>> from simcado.source import SED, scale_spectrum
+        >>> from simmetis.source import SED, scale_spectrum
         >>>
         >>> star_list = ["A0V", "G2V", "M5V", "B6III", "O9I", "M2IV"]
         >>> magnitudes = [ 20,  25.5,  29.1,      17,  14.3,   22   ]
@@ -2364,9 +2358,9 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
 
     Re-scale the above spectra to the same magnitudes in Pa-Beta
 
-        >>> # Find which filters are in the simcado/data directory
+        >>> # Find which filters are in the simmetis/data directory
         >>>
-        >>> import simcado.optics as sim_op
+        >>> import simmetis.optics as sim_op
         >>> print(sim_op.get_filter_set()       )
         ['B', 'BrGamma', 'CH4_169', 'CH4_227', 'FeII_166', 'H', 'H2O_204',
             'H2_212', 'Hcont_158', 'I', 'J', 'K', 'Ks', 'NH3_153', 'PaBeta',
@@ -2383,14 +2377,14 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
     #
     #     >>> # first make a tranmsission curve for the filter
     #     >>>
-    #     >>> from simcado.spectral import TransmissionCurve
+    #     >>> from simmetis.spectral import TransmissionCurve
     #     >>> filt_lam   = np.array([0.3, 1.09, 1.1, 1.15, 1.16, 3.])
     #     >>> filt_trans = np.array([0.,  0.,   1.,  1.,   0.,   0.])
     #     >>> new_filt   = TransmissionCurve(lam=filt_lam, val=filt_trans)
     #     >>>
     #     >>> lam, spec = scale_spectrum(lam, spec, magnitudes, new_filt)
 
-    from simcado.optics import get_filter_curve
+    from simmetis.optics import get_filter_curve
 
     mag = np.asarray(mag)
 
@@ -2408,10 +2402,12 @@ def scale_spectrum(lam, spec, mag, filter_name="Ks", return_ec=False):
 
     if isinstance(filter_name, TransmissionCurve):
         filt = filter_name
-    elif os.path.exists(filter_name):
-        filt = TransmissionCurve(filename=filter_name)
     else:
-        filt = get_filter_curve(filter_name)
+        fname = find_file(filter_name)
+        if fname is not None:
+            filt = TransmissionCurve(filename=fname)
+        else:
+            filt = get_filter_curve(filter_name)
 
     # Rescale the spectra
     for i in range(len(curves)):
@@ -2449,11 +2445,11 @@ def scale_spectrum_sb(lam, spec, mag_per_arcsec, pix_res=0.004,
     pix_res : float
         [arcsec] the pixel resolution
     filter_name : str, TransmissionCurve
-        Any filter name from SimCADO or a
-        :class:`~.simcado.spectral.TransmissionCurve` object
-        (see :func:`~.simcado.optics.get_filter_set`)
+        Any filter name from SimMETIS or a
+        :class:`~.simmetis.spectral.TransmissionCurve` object
+        (see :func:`~.simmetis.optics.get_filter_set`)
     return_ec : bool, optional
-        If True, a :class:`simcado.spectral.EmissionCurve` object is returned.
+        If True, a :class:`simmetis.spectral.EmissionCurve` object is returned.
         Default is False
 
     Returns
@@ -2488,10 +2484,10 @@ def flat_spectrum(mag, filter_name="Ks", return_ec=False):
     mag : float
         [mag] magnitude of the source
     filter_name : str, TransmissionCurve, optional
-        str - filter name. See ``simcado.optics.get_filter_set()``. Default: "Ks"
-        TransmissionCurve - output of ``simcado.optics.get_filter_curve()``
+        str - filter name. See ``simmetis.optics.get_filter_set()``. Default: "Ks"
+        TransmissionCurve - output of ``simmetis.optics.get_filter_curve()``
     return_ec : bool, optional
-        If True, a simcado.spectral.EmissionCurve object is returned.
+        If True, a simmetis.spectral.EmissionCurve object is returned.
         Default is False
 
     Returns
@@ -2525,12 +2521,12 @@ def flat_spectrum_sb(mag_per_arcsec, filter_name="Ks", pix_res=0.004,
     mag_per_arcsec : float
         [mag/arcsec2] surface brightness of the source
     filter_name : str, TransmissionCurve, optional
-        str - filter name. See ``simcado.optics.get_filter_set()``. Default: "Ks"
-        TransmissionCurve - output of ``simcado.optics.get_filter_curve()``
+        str - filter name. See ``simmetis.optics.get_filter_set()``. Default: "Ks"
+        TransmissionCurve - output of ``simmetis.optics.get_filter_curve()``
     pix_res : float
         [arcsec] the pixel resolution. Default is 4mas (i.e. 0.004)
     return_ec : bool, optional
-        Default is False. If True, a simcado.spectral.EmissionCurve object is
+        Default is False. If True, a simmetis.spectral.EmissionCurve object is
         returned.
 
     Returns
@@ -2584,7 +2580,7 @@ def get_lum_class_params(lum_class="V", cat=None):
     import astropy.table as tbl
 
     if cat is None:
-        cat = ioascii.read(__pkg_dir__+"/data/EC_all_stars.csv")
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     t = []
     for row in cat:
@@ -2624,7 +2620,7 @@ def get_nearest_spec_type(value, param="B-V", cat=None):
     param : str, optional
         Default is "B-V". The column to be searched.
     cat : astropy.Table, optional
-        The catalogue to use. Default is in the simcado/data directory
+        The catalogue to use. Default is in the simmetis/data directory
 
     Returns
     -------
@@ -2633,7 +2629,7 @@ def get_nearest_spec_type(value, param="B-V", cat=None):
     """
 
     if cat is None:
-        cat = ioascii.read(__pkg_dir__+"/data/EC_all_stars.csv")
+        cat = ioascii.read(find_file("EC_all_stars.csv"))
 
     if isinstance(value, (np.ndarray, list, tuple)):
         spt = []
@@ -2706,7 +2702,7 @@ def load(filename):
 
 
 """
-A bunch of helper functions to generate galaxies in SimCADO
+A bunch of helper functions to generate galaxies in SimMETIS
 """
 
 
@@ -2881,7 +2877,7 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
 
     filter_name : str, TransmissionCurve, optional
         Default is "Ks". Values can be either:
-        - the name of a SimCADO filter : see optics.get_filter_set()
+        - the name of a SimMETIS filter : see optics.get_filter_set()
         - or a TransmissionCurve containing a user-defined filter
 
     normalization : str, optional
@@ -2895,7 +2891,7 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
 
     spectrum : str, EmissionCurve, optional
         The spectrum to be associated with the galaxy. Values can either be:
-        - the name of a SimCADO SED spectrum : see get_SED_names()
+        - the name of a SimMETIS SED spectrum : see get_SED_names()
         - an EmissionCurve with a user defined spectrum
 
 
@@ -2917,7 +2913,7 @@ def elliptical(half_light_radius, plate_scale, magnitude=10, n=4,
 
     Returns
     -------
-    galaxy_src : simcado.Source
+    galaxy_src : simmetis.Source
 
 
     See Also
@@ -3193,7 +3189,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     filter_name : str, TransmissionCurve, optional
         Default is "Ks". Values can be either:
-        - the name of a SimCADO filter : see optics.get_filter_set()
+        - the name of a SimMETIS filter : see optics.get_filter_set()
         - or a TransmissionCurve containing a user-defined filter
 
     normalization : str, optional
@@ -3207,7 +3203,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     spectrum : str, EmissionCurve, optional
         The spectrum to be associated with the galaxy. Values can either be:
-        - the name of a SimCADO SED spectrum : see get_SED_names()
+        - the name of a SimMETIS SED spectrum : see get_SED_names()
         - an EmissionCurve with a user defined spectrum
 
 
@@ -3242,7 +3238,7 @@ def spiral(half_light_radius, plate_scale, magnitude=10,
 
     Returns
     -------
-    galaxy_src : simcado.Source
+    galaxy_src : simmetis.Source
 
 
     See Also

@@ -1,10 +1,33 @@
-'''Unit tests for module simcado.utils'''
+'''Unit tests for module simmetis.utils'''
 
-from simcado.utils import parallactic_angle, deriv_polynomial2d
+import pytest
+import simmetis as sim
+from simmetis.utils import parallactic_angle, deriv_polynomial2d
+from simmetis.utils import find_file
 import numpy as np
 
+
+class TestFindFile():
+    '''Tests of function simmetis.utils.find_file'''
+
+    def test_01(self):
+        '''Test: fail if not a string'''
+        with pytest.raises(TypeError):
+            find_file(1.2, sim.__search_path__)
+
+    def test_02(self):
+        '''Test: existing file'''
+        filename = 'utils.py'
+        assert find_file(filename, sim.__search_path__)
+
+    def test_03(self):
+        '''Test: non-extisting file'''
+        filename = 'utils987654.pz'
+        assert find_file(filename, sim.__search_path__) is None
+
+
 class TestParallacticAngle():
-    '''Tests of function simcado.utils.parallactic_angle'''
+    '''Tests of function simmetis.utils.parallactic_angle'''
 
     def test_01(self):
         '''Test: parallactic angle negative east of meridian'''
@@ -41,10 +64,10 @@ class TestParallacticAngle():
 
 
 class TestDerivPolynomial2D():
-    '''Tests of simcado.utils.deriv_polynomial2d'''
+    '''Tests of simmetis.utils.deriv_polynomial2d'''
 
     def test_01(self):
-        '''Test simcado.utils.deriv_polynomial2d'''
+        '''Test simmetis.utils.deriv_polynomial2d'''
         from astropy.modeling.models import Polynomial2D
 
         ximg, yimg = np.meshgrid(np.linspace(-1, 1, 101),
@@ -60,5 +83,5 @@ class TestDerivPolynomial2D():
         y_x_test = dpoly_x(ximg, yimg)
         y_y_test = dpoly_y(ximg, yimg)
 
-        assert(np.allclose(y_x, y_x_test))
-        assert(np.allclose(y_y, y_y_test))
+        assert np.allclose(y_x, y_x_test)
+        assert np.allclose(y_y, y_y_test)

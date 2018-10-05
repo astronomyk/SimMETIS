@@ -14,29 +14,29 @@ try:
 except:
     pass
 
-import simcado as sim
+import simmetis as sim
 
 
-def make_uniform_dense_core_image(mass, dist_mod, side_width=1024, filename=None, 
+def make_uniform_dense_core_image(mass, dist_mod, side_width=1024, filename=None,
                                   n_stack=1, pix_res=0.004, **kwargs):
     """
     Makes an image with a uniformly random distribution of stars from an IMF
-    
+
     Parameter
     ---------
     mass : float
         [Msun]
-    
+
     dist_mod : float
-        [mag] 
-    
+        [mag]
+
     side_width : int
         [pixel]
-        
+
     filename : str
-        
+
     n_stack : int
-    
+
     pix_res : float
         [arcsec/pixel] Default is MICADO Wide: 4mas/px
 
@@ -48,37 +48,37 @@ def make_uniform_dense_core_image(mass, dist_mod, side_width=1024, filename=None
     OBS_EXPTIME
 
     """
-    
+
     params = {"SCOPE_PSF_FILE" : None,
               "OBS_REMOVE_CONST_BG" : "yes",
               "OBS_EXPTIME" : 60}
     params.update(kwargs)
-    
+
     density = mass / (side_width * pix_res)**2
-    
+
     masses = imf_population(mass=mass)
     mags = abs_mag_from_mass(masses) + dist_mod
     n_stars = len(masses)
-    x, y = np.random.randint(-side_width//2, side_width, (2, n_stars)) 
+    x, y = np.random.randint(-side_width//2, side_width, (2, n_stars))
 
     src = sim.source.stars(mags=mags, x=x, y=y, pix_unit="pixel")
 
     hdu, (cmd, opt, fpa) = sim.run(src, return_internals=True, **kwargs)
 
     for i in range(1, n_stack):
-        hdu[0].data += fpa.read_out()[0].data   
+        hdu[0].data += fpa.read_out()[0].data
 
     if filename is None:
         filename = "rho="+str(int(density))+".tbl"
-    
+
     tbl = Table(data=[x, y, masses, mags], names=["x", "y", "masses", "mags"])
     tbl.write(filename, format="fits",  overwrite=True)
-    
+
     f = fits.open(filename)
     hdu.append(f[1])
     hdu.writeto(filename.replace(".tbl", ".fits"), clobber=True)
     f.close()
-    
+
     return hdu
 
 
@@ -86,7 +86,7 @@ def binned_clipped_stats(x, y, bins, **kwargs):
     """
     Sigma clipped stats for binned data
     """
-    
+
     m_stats = []
     for i in range(len(bins)-1):
         xmin, xmax = bins[i], bins[i+1]
@@ -94,14 +94,14 @@ def binned_clipped_stats(x, y, bins, **kwargs):
         m_stats += [sigma_clipped_stats(y[mask], **kwargs)]
 
     m_stats = np.array(m_stats)
-        
-    tbl_1 = Table(data=[bins[:-1], bins[1:], 0.5*(bins[:-1]+bins[1:]) ], 
+
+    tbl_1 = Table(data=[bins[:-1], bins[1:], 0.5*(bins[:-1]+bins[1:]) ],
                   names=["x_min", "x_max", "x_center"])
-    tbl_2 = Table(data=m_stats, 
+    tbl_2 = Table(data=m_stats,
                   names=["mean", "median", "std"])
 
     tbl_stats = hstack([tbl_1, tbl_2])
-    
+
     return tbl_stats
 
 
@@ -116,19 +116,19 @@ def power_law(alphas, lims, ddex=0.1, scale_factors=None):
         The power law indicies
 
     lims : list of limit pairs
-        (N, 2) sized list for the minimum and maximum x-axis limits for each 
-        segment of the power law. The second value of the n-1 pair must be equal 
+        (N, 2) sized list for the minimum and maximum x-axis limits for each
+        segment of the power law. The second value of the n-1 pair must be equal
         to the first entry of n pair.
         E.g. [[0, 1], [1, 10]]
 
     ddex : float
         The resolution of the returned  curve_fit
-        
+
     scale_factors : list
         A list of scaling factors for the parts of various parts of the curve
         len(scale_factors) must be equal to len(alphas)
-        
-        
+
+
     Returns
     -------
     x, y : np.ndarray
@@ -139,7 +139,7 @@ def power_law(alphas, lims, ddex=0.1, scale_factors=None):
 
     if scale_factors is None:
         scale_factors = [1]*len(alphas)
-    
+
     yy = []
     xx = []
     ff = []
@@ -154,7 +154,7 @@ def power_law(alphas, lims, ddex=0.1, scale_factors=None):
         yy += [yc]
         xx += [xc]
         ff += [sf]*len(xc)
-        
+
     for i in range(1, len(yy)):
         f = yy[i-1][-1] / yy[i][0]
         yy[i] *= f
@@ -162,10 +162,10 @@ def power_law(alphas, lims, ddex=0.1, scale_factors=None):
     x = np.concatenate(xx)
     y = np.concatenate(yy)
     f = np.array(ff)
-    
+
     y *= f
     y /= y.sum()
-    
+
     return x, y
 
 
@@ -193,8 +193,8 @@ def imf_population(mass=1000, ddex=0.01, alphas=[0.3, 1.3, 2.3],
 
     scale_factors : list
         To take into account the Brown Dwarf desert. Defaults are [0.3, 1, 1]
-        
-        
+
+
     Returns
     -------
     masses : list
@@ -243,7 +243,7 @@ def luminosity_from_mass(mass, cat="../MS-stars.txt", col_mag="M_Ks", col_mass="
         The name of the column in ``cat`` containing the mass values
 
     flux_0 : float
-        Flux value for a mag=0 star. Used to scale the ``luminosity`` values 
+        Flux value for a mag=0 star. Used to scale the ``luminosity`` values
         from the catalogue
 
     dist_mod : float
@@ -292,7 +292,7 @@ def abs_mag_from_mass(mass, cat="../MS-stars.txt", col_mag="M_Ks", col_mass="Msu
         The name of the column in ``cat`` containing the mass values
 
     flux_0 : float
-        Flux value for a mag=0 star. Used to scale the ``luminosity`` values 
+        Flux value for a mag=0 star. Used to scale the ``luminosity`` values
         from the catalogue
 
     dist_mod : float
@@ -320,7 +320,7 @@ def abs_mag_from_mass(mass, cat="../MS-stars.txt", col_mag="M_Ks", col_mass="Msu
     return mags
 
 
-def mass_from_luminosity(luminosity, cat="../MS-stars.txt", col_mag="M_Ks", 
+def mass_from_luminosity(luminosity, cat="../MS-stars.txt", col_mag="M_Ks",
                          col_mass="Msun", flux_0=1., dist_mod=0.):
     """
     Gets a stellar masses based on luminosities
@@ -328,7 +328,7 @@ def mass_from_luminosity(luminosity, cat="../MS-stars.txt", col_mag="M_Ks",
     Parameters
     ---------
     luminosity : float, array
-        The flux of the star compared to a mag=0 star. Flux of mag=0 star can be 
+        The flux of the star compared to a mag=0 star. Flux of mag=0 star can be
         specified with the parameter flux_0
 
     cat : str
@@ -341,7 +341,7 @@ def mass_from_luminosity(luminosity, cat="../MS-stars.txt", col_mag="M_Ks",
         The name of the column in ``cat`` containing the mass values
 
     flux_0 : float
-        Flux value for a mag=0 star. Used to normalise the ``luminosity`` values 
+        Flux value for a mag=0 star. Used to normalise the ``luminosity`` values
         to match the catalogue
 
     dist_mod : float
@@ -435,7 +435,7 @@ def get_flux(im, plate_scale, radius=9, xp=None, yp=None):
     initial_guess = (mx,n,n,sig,sig,0,0)
 
     try:
-        popt, pcov = opt.curve_fit(twoD_Gaussian, (xx, yy), data.ravel(), 
+        popt, pcov = opt.curve_fit(twoD_Gaussian, (xx, yy), data.ravel(),
                                    p0=initial_guess)
         data_fitted = twoD_Gaussian((xx, yy), *popt).reshape((2*n+1,2*n+1))
 
@@ -480,18 +480,18 @@ def subtract_psfs(image, psf, radius, x, y, e_limit=0.1, **kwargs):
             image of the PSF, doesn't need to be size-matched to the image
 
         radius : int
-            radius of box around the PSF to be used for matching the height and 
+            radius of box around the PSF to be used for matching the height and
             base
 
         x, y : list, array
             pixel coordinates
 
-        e_limit : float 
-            If the relative difference between thielslope fits is less than some 
+        e_limit : float
+            If the relative difference between thielslope fits is less than some
             value, reject the subtraction
             i.e. (m_high - m_low) / m < 2 * e_limit
-            
-        
+
+
         Returns
         -------
         im_new : 2D array
@@ -510,9 +510,9 @@ def subtract_psfs(image, psf, radius, x, y, e_limit=0.1, **kwargs):
             pw, ph = np.shape(psf)
             pad_w = int(w-pw/2)+1
             psf_pad = np.pad(psf, pad_w, mode="constant")
-        else: 
+        else:
             psf_pad = psf
-        
+
         q = int(radius)
         cy, cx = np.where(psf_pad == psf_pad.max())
         cy, cx = cy[0], cx[0]
@@ -547,7 +547,7 @@ def subtract_psfs(image, psf, radius, x, y, e_limit=0.1, **kwargs):
             if p > 0.1:
                 fit_results += [[0]*7]
                 continue
-            # If the relative difference between thielslope fits is less than 
+            # If the relative difference between thielslope fits is less than
             #   some value, reject the subtraction
             # i.e. the (m_high - m_low) < 2 * m * e_limit
             if e > e_limit:
@@ -559,7 +559,7 @@ def subtract_psfs(image, psf, radius, x, y, e_limit=0.1, **kwargs):
                 continue
             else:
                 fit_results += [[m, c, r, p, e, a, b]]
-                
+
 
             psf_cutout = np.copy(psf_pad[cx-dx0 : cx+dx1, cy-dy0 : cy+dy1])
             psf_cutout *= m
@@ -594,16 +594,16 @@ def iter_psf_photometry(image, psf, radius, n_steps=5, **kwargs):
     -------------------
     sigma_bins : array
         The sigma bins for setting
-        
+
     verbose : bool
-    
+
     Returns
     -------
     results : astropy.Table
         Table with DAOStarFinder results for all runs
 
     new_im : 2D array
-        the resulting image after the stars found by DAOStarFinder have been 
+        the resulting image after the stars found by DAOStarFinder have been
         subtracted
 
     """
@@ -611,12 +611,12 @@ def iter_psf_photometry(image, psf, radius, n_steps=5, **kwargs):
     new_im = np.copy(image).astype(np.float32)
 
     tables = []
-    
+
     if "sigma_bins" in kwargs.keys():
         sigma_bins = kwargs["sigma_bins"]
     else:
         sigma_bins = np.logspace(0.7,3, n_steps)[::-1]
-    
+
     for nsig in sigma_bins:
 
         mean, median, std = sigma_clipped_stats(new_im, sigma=3.0, iters=5)
@@ -628,22 +628,22 @@ def iter_psf_photometry(image, psf, radius, n_steps=5, **kwargs):
         if "verbose" in kwargs.keys():
             if kwargs["verbose"]:
                 print("Found "+str(len(sources))+" sources above "+str(nsig)+"sigma")
-            
+
         xs, ys, peaks = sources["ycentroid"], sources["xcentroid"], sources["peak"]
         ii = np.argsort(peaks)[::-1]
 
         # remove all the stars in this current SN bin
-        new_im, fit_results = subtract_psfs(new_im, psf, radius, xs[ii], ys[ii], 
+        new_im, fit_results = subtract_psfs(new_im, psf, radius, xs[ii], ys[ii],
                                             **kwargs)
 
-        fit_tbl = Table(data=np.array(fit_results), names=["m", "c", "r", "p", 
+        fit_tbl = Table(data=np.array(fit_results), names=["m", "c", "r", "p",
                                                            "merr", "mlow", "mhigh"])
         idx_tbl = Table(data=[ii], names=["ii"])
         sources = hstack([sources[ii], fit_tbl, idx_tbl])
-    
+
         mask = fit_tbl["m"] > 0
         tables += [sources[mask]]
 
     results = vstack(tables)
-    
+
     return results, new_im

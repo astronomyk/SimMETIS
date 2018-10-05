@@ -15,7 +15,7 @@ from photutils.background import MMMBackground
 
 
 import aplpy
-import simcado as sim
+import simmetis as sim
 
 
 class Stamp(object):
@@ -45,14 +45,14 @@ class Stamp(object):
         except:
             height, x, y, width_x, width_y = [0]*5
 
-        
+
         self.x,  self.y  = x, y
         self.dx, self.dy = width_x, width_y
         if fwhm is None:
             self.fwhm = self.get_fwhm()
         else:
             self.fwhm = fwhm
-        
+
         self.mag, self.snr, self.flux, self.noise, self.bg_std, self.bg_median = \
                             self.get_photometry(self.params["aperture_radius"],
                                                 self.fwhm,
@@ -60,10 +60,10 @@ class Stamp(object):
                                                 self.params["sky_radius_outer"],
                                                 self.params["mag_zero_point"],
                                                 self.params["photometry_mode"])
-        
+
         self.peak = self._get_peak()
-        
-        
+
+
 
     def get_photometry(self, aperture_radius=3, fwhm=None,
                        sky_radius_inner=None, sky_radius_outer=None,
@@ -88,66 +88,66 @@ class Stamp(object):
         noise = bg_std * np.sqrt(np.sum(bg != 0))
 
         im = np.copy(self.image[y-r:y+r, x-r:x+r])
-        
+
         if "circ" in mode.lower():
             pass
-        
+
         elif "basic" in mode.lower():
             flux = np.sum(im - bg_median)
             self.results = None
-            
-            
-        elif "psf" in mode.lower():    
-            
+
+
+        elif "psf" in mode.lower():
+
             if fwhm is None:
                 warnings.warn("``fwhm`` must be given for PSF photometry")
-                flux = 0 
-            
+                flux = 0
+
             try:
-                x,y  = self._find_center(self.image, fwhm)   
+                x,y  = self._find_center(self.image, fwhm)
                 flux = self._basic_psf_flux(self.image, fwhm, x=x, y=y)
             ##### Really bad form!!! Keep this in mind =)
                 self.x, self.y = x, y
             except:
                 flux = 0
-            
 
-            
+
+
         elif "dao" in mode.lower():
 
             if fwhm is None:
                 warnings.warn("``fwhm`` must be given for PSF photometry")
-                flux = 0 
+                flux = 0
 
             sigma = fwhm / 2.35
             prf = IntegratedGaussianPRF(sigma)
             fitshape = im.shape[0] if im.shape[0] % 2 == 1 else im.shape[0] - 1
 
-            daophot = DAOPhotPSFPhotometry(crit_separation=sigma, 
-                                           threshold=np.median(im), 
-                                           fwhm=fwhm, psf_model=prf, 
+            daophot = DAOPhotPSFPhotometry(crit_separation=sigma,
+                                           threshold=np.median(im),
+                                           fwhm=fwhm, psf_model=prf,
                                            fitshape=fitshape)
-            
+
             #try:
             results = daophot(im)
 
             width, height = im.shape
             dist_from_centre = np.sqrt((results["x_fit"] - width  / 2)**2 + \
                                        (results["y_fit"] - height / 2)**2)
-        
+
             i = np.argmin(dist_from_centre)
-            x, y  = results["x_fit"][i], results["y_fit"][i], 
+            x, y  = results["x_fit"][i], results["y_fit"][i],
             flux  = results["flux_fit"][i]
-            
+
             ##### Really bad form!!! Keep this in mind =)
             self.x, self.y = x, y
             self.results = results
-            
+
             #except:
             #    self.results = None
              #   flux = 0
-                
-                        
+
+
         snr = flux / noise
         mag = -2.5 * np.log10(flux) + mag_zero_point
 
@@ -155,11 +155,11 @@ class Stamp(object):
 
 
     def get_moments(self):
-    
+
         return gaussian_moments(self.image)
 
     def get_fwhm(self):
-        
+
         fwhm = 2.35 * 0.5 * (self.dx + self.dy)
         if np.isnan(fwhm):
             fwhm = 1
@@ -167,22 +167,22 @@ class Stamp(object):
             fwhm = 1
         elif fwhm > 50:
             fwhm = 50
-        
+
         return fwhm
 
     def _get_peak(self, n=3):
-        
+
         xc, yc = int(self.x), int(self.y)
         try:
             peak = np.max(self.image[yc-n:yc+n, xc-n:xc+n])
         except:
             peak = 0
-            
+
         return peak
-        
-        
+
+
     def _find_center(self, image, fwhm):
-    
+
         mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=5)
         im = image - median
 
@@ -196,11 +196,11 @@ class Stamp(object):
             x, y = results[i]["xcentroid"], results[i]["ycentroid"]
         else:
             x, y = w/2, h/2
-        return x, y 
+        return x, y
 
 
     def _basic_psf_flux(self, image, fwhm, x=None, y=None, return_residual_image=False):
-       
+
         w,h = image.shape
         if x is None:
             x = w / 2
@@ -210,7 +210,7 @@ class Stamp(object):
         wfit = w if w % 2 == 1 else w - 1
         hfit = h if h % 2 == 1 else h - 1
         fitshape = (wfit, hfit)
-        
+
         daogroup = DAOGroup(2.0*fwhm)
         psf_model = IntegratedGaussianPRF(sigma=fwhm/2.35)
 
@@ -227,12 +227,12 @@ class Stamp(object):
         flux = result["flux_fit"].data[0]
 
         self.results = result
-        
+
         if return_residual_image:
             return flux, photometry.get_residual_image()
         else:
             return flux
-        
+
 
 
 class PostageStamps(object):
@@ -374,24 +374,24 @@ def gaussian_moments(data):
     width_y = np.sqrt(np.abs((np.arange(row.size)-x)**2*row).sum()/row.sum())
 
     return height, x, y, width_x, width_y
-    
-    
-def remove_hot_pixels(image, threshold=5000):    
+
+
+def remove_hot_pixels(image, threshold=5000):
     """
-    
+
     Parameters
     ----------
     image : np.ndarray
         The image, in 2D format
     threshold : float, int
-        The difference between any two neighbbouring pixels. 
+        The difference between any two neighbbouring pixels.
 
-    
+
     Returns
     -------
     a : np.array
         The input image with the hot pixels set to the image median
-    
+
     """
     a = np.copy(image)
     b = a[:-1,:] - a[1:,:]
@@ -399,38 +399,38 @@ def remove_hot_pixels(image, threshold=5000):
 
     x, y = np.where(c > threshold)
     a[x+1, y] = np.median(a)
-    
+
     return a
-    
-    
+
+
 def plot_catalogue_on_image(catalogue, hdu, hdu_ext, dx=0, dy=0, cat_ra_name="RA", cat_dec_name="DE", cat_mag_name="J"):
     """
     Overplots a scatter of circles on the FITS image
-    
+
     Parameters
-    ----------       
+    ----------
     catalogue : str, astropy.Table
         A catalogue of stars - the same as used in mimic_image()
-                
+
     hdu : str, astropy.HDUList
         The original FITS object- either a filename or an astropy.HDUList object
-        
+
     hdu_ext : int
         The extension in the original FITS file which should be simulated
-    
+
     dx, dy : float, int
         Offset in pixels between the image and the catalogue coordinates
-        
+
     cat_ra_name, cat_dec_name, cat_filter_name : str
         Names of the columns in the catalogue for RA, Dec and the magnitude values
-        
-    
+
+
     Examples
     --------
     ::
-    
+
         >>> plot_catalogue_on_image(cat, hdu_real, 3)
-        
+
     """
 
     n = 0
@@ -459,100 +459,100 @@ def plot_catalogue_on_image(catalogue, hdu, hdu_ext, dx=0, dy=0, cat_ra_name="RA
     plt.colorbar()
 
     plt.title(hdu[0].header["DATE-OBS"])
-    plt.xlim(-50, 2100); plt.ylim(-50, 2100)        
-    
-    
-    
-def mimic_image(hdu, catalogue, cmds=None, hdu_ext=0, sim_chip_n=0, return_stamps=False, 
+    plt.xlim(-50, 2100); plt.ylim(-50, 2100)
+
+
+
+def mimic_image(hdu, catalogue, cmds=None, hdu_ext=0, sim_chip_n=0, return_stamps=False,
                 cat_ra_name="RA", cat_dec_name="DE", cat_filter_name="J", **kwargs):
     """
-    Create a SimCADO image to mimic a real FITS file
-    
+    Create a SimMETIS image to mimic a real FITS file
+
     Parameters
     ----------
     hdu : str, astropy.HDUList
         The original FITS object- either a filename or an astropy.HDUList object
-    
+
     catalogue : str, astropy.Table
         A catalogue of stars - either a filename or an astropy.Table object
-    
-    cmds : str, simcado.UserCommands
+
+    cmds : str, simmetis.UserCommands
         Commands by which to simulate the image - a filename to a .config file or a UserCommands object
-    
+
     hdu_ext : int
         The extension in the original FITS file which should be simulated
-    
+
     sim_chip_n : int
         Which chip in the FPA_LAYOUT to simulate. Passed to apply_optical_train() and read_out()
-    
+
     return_stamps : bool
         If True, returns two PostageStamps object for the original HDU and the generated HDU
-   
+
     cat_ra_name, cat_dec_name, cat_filter_name : str
         The names of the column in catalogue which point to the RA, Dec and filter magnitudes for the stars
-    
-        
+
+
     Optional Parameters
     -------------------
     As passed to a PostageStamps object
-    
+
     "dx"           : 0,
     "dy "          : 0,
-    "bg_tile_size" : 24, 
-    "stamp_width"  : 24, 
-    "hot_pixel_threshold" : 3000 
-    
-    
+    "bg_tile_size" : 24,
+    "stamp_width"  : 24,
+    "hot_pixel_threshold" : 3000
+
+
     Returns
     -------
     hdu_sim, src [, post_real, post_sim]
         If return_stamps is True, post_real and post_sim are returned
-        
-        
+
+
     Examples
     --------
     ::
-    
+
         >>> hdu_real = fits.open("HAWKI.2008-11-05T04_08_55.552.fits")
-        >>> cat = ascii.read("ngc362_cohen.dat")    
-        >>> 
+        >>> cat = ascii.read("ngc362_cohen.dat")
+        >>>
         >>> dx, dy = -5, 15
-        >>> 
+        >>>
         >>> cmd = sim.UserCommands("hawki_ngc362.config")
         >>> cmd["INST_FILTER_TC"] = "J"
         >>> cmd["OBS_EXPTIME"] = 10
-        >>> 
-        >>> out = mimic_image(hdu=hdu_real, catalogue=cat, cmds=cmd, hdu_ext=3, 
-        ...                   sim_chip_n=3, return_stamps=True, 
+        >>>
+        >>> out = mimic_image(hdu=hdu_real, catalogue=cat, cmds=cmd, hdu_ext=3,
+        ...                   sim_chip_n=3, return_stamps=True,
         ...                   dx=dx, dy=dy)
         >>> hdu_sim, src, post_real, post_sim = out
         >>> len(out)
         4
-        
+
     """
-    
+
     if isinstance(hdu, str) and os.path.exists(hdu):
         hdu = fits.open(hdu)[hdu_ext]
     elif isinstance(hdu, fits.HDUList):
         hdu = hdu[hdu_ext]
     else:
         raise ValueError("hdu must be a filename or an astropy HDU object: "+type(hdu))
-    
+
     if isinstance(catalogue, str) and os.path.exists(catalogue):
         cat = ascii.read(catalogue)
     elif isinstance(catalogue, Table):
         cat = catalogue
     else:
         raise ValueError("catalogue must be a filename or an astropy.Table object: "+type(catalogue))
-    
+
     if isinstance(cmds, str) and os.path.exists(cmds):
         cmds = sim.UserCommands(cmds)
     elif isinstance(cmds, sim.UserCommands):
         pass
     else:
-        raise ValueError("cmds must be a filename or an simcado.UserCommands object: "+type(cmds))
-    
-    
+        raise ValueError("cmds must be a filename or an simmetis.UserCommands object: "+type(cmds))
+
+
     fig = plt.figure(figsize=(0.1,0.1))
     apl_fig = aplpy.FITSFigure(hdu, figure=fig)
 
@@ -572,17 +572,17 @@ def mimic_image(hdu, catalogue, cmds=None, hdu_ext=0, sim_chip_n=0, return_stamp
     fpa = sim.Detector(cmds, small_fov=False)
 
     print(sim_chip_n)
-    
+
     src.apply_optical_train(opt, fpa, chips=sim_chip_n)
     hdu_sim = fpa.read_out(chips=sim_chip_n)
 
     ## Get the Postage Stamps
     if return_stamps:
-        
+
         params = {"dx"           : 0,
                   "dy "          : 0,
-                  "bg_tile_size" : 24, 
-                  "stamp_width"  : 24, 
+                  "bg_tile_size" : 24,
+                  "stamp_width"  : 24,
                   "hot_pixel_threshold" : 3000 }
         params.update(**kwargs)
 
@@ -605,63 +605,63 @@ def mimic_image(hdu, catalogue, cmds=None, hdu_ext=0, sim_chip_n=0, return_stamp
         # get the images from the FITS objects
         im_sim = np.copy(hdu_sim[0].data)
         im_sim -= np.median(im_sim)
-        post_sim = PostageStamps(im_sim, x=xps, y=yps, **params) 
+        post_sim = PostageStamps(im_sim, x=xps, y=yps, **params)
 
         im_real = np.copy(hdu.data)
         im_real -= np.median(im_real)
-        post_real = PostageStamps(im_real, x=xpr, y=ypr, **params) 
+        post_real = PostageStamps(im_real, x=xpr, y=ypr, **params)
 
         return hdu_sim, src, post_real, post_sim
-    
-    else: 
+
+    else:
         return hdu_sim, src
 
 
 
-def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim, 
+def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
                         plot_limits=[[1E1, 1E6],  [1E2, 1E7],[0, 30],
                                      [-100, 1000],[1E1, 1E4],[3E0, 1E2]],
                         fwhm_limiting_mag=13.5, zero_point_mag=26,
                         hdr_seeing=None, clr="r", marker="+"):
     """
     Plot a comparison of two PostageStamp objects and two HDULists
-    
+
     Parameters
     ----------
     post_real : PostageStamps object
         Made from the real FITS image. Third output from mimic_image()
-        
+
     post_sim : PostageStamps object
         Made from the simulated FITS image. Fourth output from mimic_image()
-    
+
     hdu_real : astropy.HDUList
         The original FITS file
-    
+
     hdu_sim : astropy.HDUList
         The simulated FITS file. First output from mimic_image()
-    
+
     plot_limits : list
         As the name says
-    
+
     fwhm_limiting_mag, zero_point_mag : float
         Magnitudes for scaling the plots
-        
+
     hdr_seeing : int, float
         The Seeing FWHM from the FITS header
-    
-    
+
+
     Examples
     --------
     ::
-    
+
         >>> plot_compare_stamps(post_real, post_sim, hdu_real[3], hdu_sim[0])
 
     """
-    
+
     mag = post_sim.mags + zero_point_mag
 
     plt.figure(figsize=(12,10))
-    
+
     ###############################################
     # 1 - Peak flux value
 
@@ -673,10 +673,10 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     plt.loglog()
     plt.xlim(qmin,qmax); plt.ylim(qmin,qmax)
-    #plt.xlabel("Real Flux"); 
-    plt.ylabel("SimCADO Flux")
+    #plt.xlabel("Real Flux");
+    plt.ylabel("SimMETIS Flux")
     plt.title("Peak flux value")
-    
+
     plt.xticks([], [])
 
     ###############################################
@@ -690,12 +690,12 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     plt.loglog()
     plt.xlim(qmin,qmax); plt.ylim(qmin,qmax)
-    #plt.xlabel("Real Flux"); 
-    plt.ylabel("SimCADO Flux")
+    #plt.xlabel("Real Flux");
+    plt.ylabel("SimMETIS Flux")
     plt.title("Integrated flux inside aperture")
 
     plt.xticks([], [])
-    
+
     ###############################################
     # 3 - Residuals for peak flux
 
@@ -704,22 +704,22 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     a = post_real.peaks
     b = post_sim.peaks
-    
+
     c = (a-b)/a
-    
+
     plt.plot(a, c, clr+marker)
     plt.plot([qmin, qmax], [0, 0], "k--")
     plt.plot([qmin, qmax], [np.median(c), np.median(c)], "b")
     #plt.text(qmin, 2, np.round(np.median(c), 3), np.round(np.std(c), 3))
-    
+
     plt.semilogx()
     plt.xlim(qmin,qmax)
     plt.ylim(-3,2.9)
     plt.xlabel("Real Flux")
     plt.ylabel("Residual factor")
     #plt.title("Integrated flux inside aperture")
-    
-    
+
+
     ###############################################
     # 4 - Residuals for Integrated flux
 
@@ -728,9 +728,9 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     a = post_real.fluxes
     b = post_sim.fluxes
-    
+
     c = (a-b)/a
-    
+
     plt.plot(a, c, clr+marker)
     plt.plot([qmin, qmax], [0, 0], "k--")
     plt.plot([qmin, qmax], [np.median(c), np.median(c)], "b")
@@ -741,9 +741,9 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
     plt.ylim(-3,2.9)
     plt.xlabel("Real Flux")
     plt.ylabel("Residual factor")
-    #plt.title("Integrated flux inside aperture")    
-    
-    
+    #plt.title("Integrated flux inside aperture")
+
+
     ###############################################
     # 5 - FWHM of sources in pixels
 
@@ -753,14 +753,14 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     plt.scatter(post_real.fwhms[mask], post_sim.fwhms[mask], c=clr, s=100*(fwhm_limiting_mag-mag[mask])**2, alpha=0.5)
     plt.plot([qmin, qmax], [qmin, qmax], "k--")
-        
+
     fwhms = np.array(post_real.fwhms[mask])
     mask = (fwhms > 1) * (fwhms < 50)
     # np.invert(np.isnan(fwhms))
     fwhms = fwhms[mask]
     av = np.median(fwhms)
     plt.plot([av,av], [qmin, qmax], "k:")
-    
+
     fwhms = np.array(post_sim.fwhms[mask])
     #fwhms = fwhms[np.invert(np.isnan(fwhms))]
     av = np.median(fwhms)
@@ -768,9 +768,9 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
 
     if hdr_seeing is not None and isinstance(hdr_seeing, (int, float)):
         plt.scatter(hdr_seeing, av, c="g", s=20, marker="^")
-    
+
     plt.xlim(qmin,qmax); plt.ylim(qmin,qmax)
-    plt.xlabel("Real FWHM"); plt.ylabel("SimCADO FWHM")
+    plt.xlabel("Real FWHM"); plt.ylabel("SimMETIS FWHM")
     plt.title("FWHM of sources in pixels")
 
     ###############################################
@@ -790,7 +790,7 @@ def plot_compare_stamps(post_real, post_sim, hdu_real, hdu_sim,
     plt.xlabel("Pixel Value"); plt.ylabel("Number of pixels")
     plt.title("Histogram of pixel values")
 
-    
+
 def things():
     ###############################################
     # Std in BG for stamps
@@ -802,7 +802,7 @@ def things():
 
     plt.loglog()
     plt.xlim(qmin,qmax); plt.ylim(qmin,qmax)
-    plt.xlabel("Real Flux"); plt.ylabel("SimCADO Flux")
+    plt.xlabel("Real Flux"); plt.ylabel("SimMETIS Flux")
     plt.title("Standard deviation in background flux")
 
     ###############################################
@@ -818,5 +818,5 @@ def things():
 
     plt.loglog()
     plt.xlim(qmin,qmax); plt.ylim(qmin,qmax)
-    plt.xlabel("Real SNR"); plt.ylabel("SimCADO SNR")
-    plt.title("SNR for point sources")        
+    plt.xlabel("Real SNR"); plt.ylabel("SimMETIS SNR")
+    plt.title("SNR for point sources")

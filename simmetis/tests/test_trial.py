@@ -7,8 +7,8 @@ def test_right_answer():
     assert func(3) == 4
 
 
-def run_simcado():
-    import simcado as sim
+def run_simmetis():
+    import simmetis as sim
     import os
     cmd = sim.UserCommands()
     cmd["OBS_EXPTIME"] = 3600
@@ -21,15 +21,15 @@ def run_simcado():
 
     src.apply_optical_train(opt, fpa)
     fpa.read_out("my_output.fits")
-    
+
     is_there = os.path.exists("my_output.fits")
     os.remove("my_output.fits")
-    
+
     return is_there
 
 
-def test_run_simcado():
-    assert run_simcado() == True
+def test_run_simmetis():
+    assert run_simmetis() == True
 
 
 def get_module_dir():
@@ -44,9 +44,9 @@ def background_increases_consistently_with_exptime():
     Run an empty source for exposure time: (1,2,4,8,16,32,64) mins
     If true the background level increases linearly and the stdev increases as sqrt(exptime)
     """
-    
+
     import numpy as np
-    import simcado as sim
+    import simmetis as sim
 
     cmd = sim.UserCommands()
     cmd["OBS_REMOVE_CONST_BG"] = "no"
@@ -66,15 +66,14 @@ def background_increases_consistently_with_exptime():
     stats = np.array(stats)
 
     factors = stats / stats[0,:]
-    bg_stats = [i == np.round(l**2) == np.round(j) == np.round(k) for i, j, k, l in factors] 
+    bg_stats = [i == np.round(l**2) == np.round(j) == np.round(k) for i, j, k, l in factors]
 
     return_val = np.all(bg_stats)
     if not return_val:
         print(factors)
-    
+
     return return_val
 
 
 def test_background_increases_consistently_with_exptime():
     assert background_increases_consistently_with_exptime() == True
-

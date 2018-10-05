@@ -23,7 +23,6 @@ from copy import deepcopy
 import numpy as np
 
 from astropy.io import fits      # unused
-from astropy.io import ascii as ioascii    # 'ascii' redefines built-in
 import astropy.units as u
 
 from . import psf as psf
@@ -31,9 +30,8 @@ from . import spectral as sc
 from . import spatial as pe
 from .source import flat_spectrum_sb, scale_spectrum_sb
 from .commands import UserCommands
-from .utils import __pkg_dir__
+from .utils import __pkg_dir__, find_file
 
-import pdb
 
 __all__ = ["OpticalTrain", "get_filter_curve", "get_filter_set"]
 
@@ -216,8 +214,8 @@ class OpticalTrain(object):
 
         See also
         --------
-        :class:`simcado.spectral.TransmissionCurve`
-        :func:`simcado.optics.get_filter_set`
+        :class:`simmetis.spectral.TransmissionCurve`
+        :func:`simmetis.optics.get_filter_set`
 
         """
         if filter_name == lam == trans == None:
@@ -299,12 +297,9 @@ class OpticalTrain(object):
         # Load transmission curves into a dictionary indexed by coating
         tc_dict = dict()
         for coating in np.unique(mirr_list['Coating']):
-            if os.path.exists(coating):
-                tc_file = coating
-            elif os.path.exists(os.path.join(__pkg_dir__, "data", coating)):
-                tc_file = os.path.join(__pkg_dir__, "data", coating)
-            else:
-                raise ValueError("Could not find file: "+coating)
+            tc_file = find_file(coating, silent=True)
+            if tc_file is None:
+                raise ValueError("Could not find file: " + coating)
 
             tc_dict[coating] = sc.TransmissionCurve(tc_file)
 
@@ -486,7 +481,6 @@ class OpticalTrain(object):
             else:
                 ################## TODO ######################
                 # Generalise this to accept any TransmissionCurve object
-                from .source import flat_spectrum_sb
                 self.ec_atmo = flat_spectrum_sb(self.cmds["ATMO_BG_MAGNITUDE"],
                                                 self.cmds["INST_FILTER_TC"],
                                                 self.cmds["SIM_DETECTOR_PIX_SCALE"],
@@ -698,9 +692,12 @@ def get_filter_curve(filter_name):
     Acceptable filters can be found be calling get_filter_set()
     """
 
-    if filter_name not in get_filter_set(path=None):
-        raise ValueError("filter not recognised: "+filter)
-    fname = os.path.join(__pkg_dir__, "data", "TC_filter_"+filter_name+".dat")
+    fname = find_file(filter_name)
+    if fname is None:
+        fname = find_file("TC_filter_" + filter_name + ".dat")
+        if fname is None:
+            raise ValueError("filter not recognised: " + filter_name)
+
     return sc.TransmissionCurve(filename=fname)
 
 
