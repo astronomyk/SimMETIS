@@ -4,7 +4,7 @@ import numpy as np
 from astropy import units as u
 from astropy import constants as const
 from astropy.io import ascii
-import simcado as sim
+import simmetis as sim
 import glob
 
 def calculate_zeropoint(filter_id,filter_path,verbose=False):
@@ -61,6 +61,6 @@ def all_zeropoints():
 		print(filter_id)
 		bg_counts, source_minus_bg_counts = calculate_zeropoint(filter_id,filter_path)
 
-		with open("zeropoints_simcado.txt","a") as f:
+		with open("zeropoints_simmetis.txt","a") as f:
 			line="{0:>15}    {1:.2E}    {2:.2E}    {3}\n".format(filter_id,bg_counts,source_minus_bg_counts,filename)
 			f.write(line)

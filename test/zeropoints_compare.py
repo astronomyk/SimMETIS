@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 roy=ascii.read("zeropoints_roy.txt",names=["filter_name","lam_c_mu","limit_muJy","inband_flux0_ph_s","inband_flux0_e_s","zeropoint_Jy","bg_ph_s_pix","bg_e_s_pix","id"])
-simcado=ascii.read("zeropoints_simcado.txt",names=["filter_name","bg_counts_s_pix","source_counts_s","id"])
+simcado=ascii.read("zeropoints_simmetis.txt",names=["filter_name","bg_counts_s_pix","source_counts_s","id"])
 j=join(roy,simcado,keys="id",join_type="left")
 
 
@@ -20,7 +20,7 @@ for r in j:
 		plt.text(k,ratio+0.02,r["filter_name_1"],rotation=90,fontsize=5,va="bottom")
 		k+=1
 
-plt.ylabel("Simcado's flux / Roy's flux")
+plt.ylabel("Simmetis's flux / Roy's flux")
 plt.title("Zeropoints [ph/s]")
 
 
@@ -35,7 +35,7 @@ for r in j:
 		plt.text(k,ratio+0.02,r["filter_name_1"],rotation=90,fontsize=5,va="bottom")
 		k+=1
 
-plt.ylabel("Simcado's flux / Roy's flux")
+plt.ylabel("Simmetis's flux / Roy's flux")
 plt.title("Background fluxes [ph/s/px]")
 
 plt.tight_layout()

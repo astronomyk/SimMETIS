@@ -13,7 +13,6 @@
     PAH_3.3_ref    6.97E+03    1.23E+10    TC_filter_PAH_3.3_ref.dat
               L    2.64E+05    1.79E+11    TC_filter_L.dat
         short-L    5.66E+04    1.35E+11    TC_filter_short-L.dat
-             Q1    1.22E+07    0.00E+00    TC_filter_Q1.dat
    Br_alpha_ref    1.57E+04    3.87E+09    TC_filter_Br_alpha_ref.dat
         PAH_3.3    8.26E+03    1.23E+10    TC_filter_PAH_3.3.dat
       PAH_11.25    3.80E+07    3.52E+09    TC_filter_PAH_11.25.dat
