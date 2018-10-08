@@ -1,5 +1,5 @@
 # Development plan / Milestones
-## 0.1 (goal: end of July 2018)
+## 0.1 (October 2018)
 
 #### Goals
 - Simcado with bug fixes to support simulations at 3-20 microns
@@ -20,20 +20,11 @@
 - clean-up and document example notebooks [Leo]
 
 
-## 0.2 (goal: October 2018)
-- Spectroscopy (perhaps first long-slit, then IFU) verified against Roy’s fluxes document
+## 0.2 (December 2018)
+- LMS (IFU spectroscopy) radiometry (signal/noise rate) implemented
 
+## after PDR
+- include long-slite spectroscopy
 
-## Further things to do
-#### Minor things
-- all filter curves
-- M band
-- Q band
-- create pickled OpticalTrain objects for all METIS imaging
-- observing modes for faster operation
-
-#### Things to think about
-- first implementation of cold stop(s) in METIS
-- merge simcado and simmetis branches
-- atmospheric disperion and partial correction in METIS
-- more Aquarius noise properties (non-linear gain, correlated noise)
+## after FDR
+- simulate raw-data and process them via the pipeline

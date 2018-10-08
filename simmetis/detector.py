@@ -53,7 +53,7 @@ only the noise that a sealed-off detector would generate:
 The :class:`.Detector` is more useful if we combine it with a :class:`.Source`
 object and an :class:`.OpticalTrain`. Here we create a :class:`.Source` object
 for an open cluster in the LMC and pass the photons arriving from it through the
-E-ELT and MICADO. The photons are then cast onto the detector array. Each
+E-ELT and METIS. The photons are then cast onto the detector array. Each
 :class:`.Chip` converts the photons to ADUs and adds the resulting image to an
 Astropy ``HDUList``. The ``HDUList`` is then written to disk.
 

@@ -10,7 +10,7 @@ that can be accessed directly, instead of from the dictionary.
 UserCommands is imported directly into the simmetis package and is accessible
 from the main package - ``simmetis.UserCommands``
 
-If ``UserCommands`` is called without any arguments, the default values for MICADO
+If ``UserCommands`` is called without any arguments, the default values for METIS
 are used.
 
 Classes
@@ -40,7 +40,7 @@ References
 
 Examples
 --------
-By default ``UserCommands`` contains the parameters needed to generate the MICADO
+By default ``UserCommands`` contains the parameters needed to generate the METIS
 optical train:
 
     >>> my_cmds = simmetis.UserCommands()
@@ -102,7 +102,7 @@ class UserCommands(object):
     accessable from the main package - ``simmetis.UserCommands``
 
     If UserCommands is called without any arguments, the default values for
-    MICADO and the E-ELT are used.
+    METIS and the E-ELT are used.
 
 
     Parameters
@@ -191,7 +191,7 @@ class UserCommands(object):
     Examples
     --------
     By default ``UserCommands`` contains the parameters needed to generate the
-    MICADO optical train:
+    METIS optical train:
 
         >>> import simmetis
         >>> my_cmds = simmetis.UserCommands()

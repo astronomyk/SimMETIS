@@ -16,7 +16,7 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
         filter_name=None, exptime=None, sub_pixel=False,
         **kwargs):
     """
-    Run a MICADO simulation with default parameters
+    Run a METIS simulation with default parameters
 
     Parameters
     ----------
@@ -405,7 +405,7 @@ def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
                   mmin=22, mmax=31,
                   cmds=None, **kwargs):
     """
-    Return or plot a graph of the limiting magnitudes for MICADO
+    Return or plot a graph of the limiting magnitudes for METIS
 
 
     Parameters
@@ -809,7 +809,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     # """
     # Return the signal-to-noise for a list of magnitudes in a specific filter
 
-    # Uses the standard setup for MICADO and calculates the signal-to-noise
+    # Uses the standard setup for METIS and calculates the signal-to-noise
     # ratio or a list of magnitudes in ``mags`` in a certain broadband
     # ``filter_name``.
     # A custom UserCommands object can also be used. Note that this runs a basic
@@ -831,7 +831,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
 
     # cmds : simmetis.UserCommands, optional
         # A custom set of commands for the simulations. If not specified, SimMETIS
-        # uses the default MICADO parameters
+        # uses the default METIS parameters
 
     # Returns
     # -------

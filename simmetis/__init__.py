@@ -1,5 +1,5 @@
 """
-End-to-end simulator for MICADO on the E-ELT
+End-to-end simulator for METIS on the E-ELT
 ============================================
 """
 # turn off warnings - interesting for development, but not for runtime
