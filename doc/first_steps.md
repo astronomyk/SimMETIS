@@ -15,6 +15,6 @@ Type
 to get an inline help of this particular object.
 
 ## Example notebooks
-You will find four example Jupyter (iPython) notebooks in the sub-directory `notebooks`. Three are example simulations for imaging observations in L/M or N band filters and one is a test calculation to compare the zeropoint and background flux given by SimMETIS with a simple calculation and also with the values quoted in the METIS fluxes document (by Roy van Boekel).
+There are three example Jupyter (iPython) notebooks in the sub-directory `notebooks` that are intended to be used for your simulations. Two are example simulations for imaging observations in L/M and N band filters and one is a test calculation to compare the zeropoint and background flux given by SimMETIS with a simple calculation and also with the values quoted in the METIS fluxes document (by Roy van Boekel).
 
- - `SimMETIS_IMG_LM.ipynb` - `SimMETIS_IMG_N.ipynb` - `SimMETIS_IMG_N_zeropoint.ipynb`The L/M notebook is the simplest as it does not involve chopping or nodding, the N band notebook includes that and also a simple implementation of the N band camera's detector excess low-frequency noise (ELFN).
+ - `SimMETIS_IMG_LM.ipynb` - `SimMETIS_IMG_N.ipynb` - `SimMETIS_IMG_N_zeropoint.ipynb`The L/M notebook is the simplest as it does not involve chopping or nodding, the N band notebook includes that and also a simple implementation of the N band camera's detector excess low-frequency noise (ELFN). There is also a Q band notebook, but support for this band is still in development (in this band the entrance window contributes significantly to the background photons).
