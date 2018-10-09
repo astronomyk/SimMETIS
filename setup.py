@@ -31,8 +31,8 @@ def get_old_version(filename='simmetis/version.py'):
 
 # Is this the version number scheme that we want?
 MAJOR = 0
-MINOR = 4
-ATTR = 'dev-METIS'
+MINOR = 1
+ATTR = 'b1'
 VERSION = '%d.%d%s' % (MAJOR, MINOR, ATTR)
 
 ## This updates TINY every time setup.py is run - doesn't work if
