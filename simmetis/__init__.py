@@ -48,10 +48,6 @@ __data_dir__ = join(__pkg_dir__, "data")
 # Search path for finding files
 __search_path__ = ['./', __pkg_dir__, __data_dir__]
 
-# import the experimental stuff
-from .sandbox import imf
-
-
 
 logging.basicConfig(filename='simmetis.log', filemode='w', level=logging.DEBUG,
                     format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
