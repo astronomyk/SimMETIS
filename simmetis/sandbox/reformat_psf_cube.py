@@ -33,7 +33,7 @@ def create_hdu(psfimg, wavelen, pixscale):
     wcs.wcs.cdelt = [pixscale, pixscale]
 
     header = fits.Header()
-    header['WAVELEN'] = (wavelen, 'microns')
+    header['WAVELENG'] = (wavelen, 'microns')
     header['PIXSCALE'] = (pixscale, 'milliarcsec')
     header.extend(wcs.to_header())
 
