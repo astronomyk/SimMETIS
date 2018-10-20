@@ -8,22 +8,15 @@ import simmetis as sim
 import glob
 
 def calculate_zeropoint(filter_id,filter_path,verbose=False):
-	cmd = sim.UserCommands("../notebooks/metis_image_generic.config")
 	##
 	## find out if we have the LM or NQ band camera
 	filter_data=ascii.read(filter_path)
 	if filter_data["col1"][0] < 6:
+		cmd = sim.UserCommands("../notebooks/metis_image_LM.config")
 		cmd["FPA_QE"] = "../data/TC_detector_METIS_LM_no_losses.dat"
-		cmd["SIM_DETECTOR_PIX_SCALE"] = 0.00525
-		cmd["SCOPE_PSF_FILE"] = "PSF_4.0_microns.fits"
-		cmd["FPA_QE"] = "TC_detector_METIS_LM.dat"
-		cmd["FPA_CHIP_LAYOUT"] = "FPA_chip_layout.dat"
 	else:
-		cmd["FPA_QE"] = "../data/TC_detector_METIS_NQ_no_losses.dat"
-		cmd["SIM_DETECTOR_PIX_SCALE"] = 0.01078
-		cmd["OBS_EXPTIME"] = 1
-		cmd["SCOPE_PSF_FILE"] = "PSF_11.6_microns.fits"
-		cmd["FPA_CHIP_LAYOUT"] = "FPA_chip_layout_AQUARIUS.dat"
+		cmd = sim.UserCommands("../notebooks/metis_image_NQ.config")
+		cmd["FPA_QE"] = "TC_detector_METIS_NQ_no_losses.dat"
 			
 	cmd["INST_FILTER_TC"]="../data/TC_filter_"+filter_id+".dat"
 

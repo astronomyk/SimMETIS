@@ -13,7 +13,7 @@ eggs/
 *.egg
 MANIFEST
 
-# win/max stuff
+# macOS files
 .DS_Store
 
 # emacs backup files

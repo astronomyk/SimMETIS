@@ -2,3 +2,4 @@ include notebooks/*
 include data/*
 include doc/*
 include simmetis/tests/*
+include test/*

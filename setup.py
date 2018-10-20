@@ -9,7 +9,7 @@ from distutils.core import setup
 # Version number
 MAJOR = 0
 MINOR = 1
-ATTR = 'b1'
+ATTR = 'rc1'
 VERSION = '%d.%d%s' % (MAJOR, MINOR, ATTR)
 
 
