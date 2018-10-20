@@ -2139,7 +2139,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
 
     .. note::
         ``plate_scale`` is the original plate scale of the images. If this is
-        not the same as the plate scale of the ``Detector`` (i.e. 4mas for MICADO)
+        not the same as the plate scale of the ``Detector`` 
         then you will need to specify oversample to interpolate between the two
         scales. I.e.  oversample = Image plate scale / Detector plate scale
 
@@ -2223,7 +2223,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
                                     flux_threshold=0.2)
 
     Finally, if the image centre is not the centre of the observation, we can
-    shift the image relative to the MICADO field of view. The units for the
+    shift the image relative to the METIS field of view. The units for the
     offset are [arcsec]
 
         >>> src = source_from_image(im, lam, spec,
