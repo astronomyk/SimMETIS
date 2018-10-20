@@ -3,11 +3,16 @@ simulation.py
 """
 
 # from astropy.io import ascii as ioascii ## unused (OC)
-import warnings, logging
+#import warnings
+#import logging
 
 import numpy as np
 
-import simmetis as sim
+#import simmetis as sim
+from . import source
+from .commands import UserCommands
+from .optics import OpticalTrain
+from .detector import Detector
 
 __all__ = ["run", "snr", "check_chip_positions", "limiting_mags"]
 
@@ -61,7 +66,7 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
     """
 
     if cmds is None:
-        cmds = sim.UserCommands()
+        cmds = UserCommands()
         cmds["INST_FILTER_TC"] = "Ks"
 
         if detector_layout.lower() in ("tiny", "small", "centre", "center"):
@@ -88,9 +93,9 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
     cmds.update(kwargs)
 
     if opt_train is None:
-        opt_train = sim.OpticalTrain(cmds)
+        opt_train = OpticalTrain(cmds)
     if fpa is None:
-        fpa = sim.Detector(cmds, small_fov=False)
+        fpa = Detector(cmds, small_fov=False)
 
     print("Detector layout")
     print(fpa.layout)
@@ -102,7 +107,7 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
     if filename is not None:
         if cmds["OBS_SAVE_ALL_FRAMES"] == "yes":
             for n in range(cmds["OBS_NDIT"]):
-                fname = filename.replace(".",str(n)+".")
+                fname = filename.replace(".", str(n) + ".")
                 hdu = fpa.read_out(filename=fname, to_disk=True, OBS_NDIT=1)
         else:
             hdu = fpa.read_out(filename=filename, to_disk=True)
@@ -117,7 +122,7 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
 
 
 def check_chip_positions(filename="src.fits", x_cen=17.084, y_cen=17.084,
-                         n = 0.3, mode="wide"):
+                         n=0.3, mode="wide"):
     """
     Creates a series of grids of stars and generates the output images
 
@@ -139,14 +144,13 @@ def check_chip_positions(filename="src.fits", x_cen=17.084, y_cen=17.084,
         [y_cen + i*n for i in range(8)] + \
         [y_cen + i*n for i in range(9)]
 
-    lam, spec = sim.source.SED("A0V", "Ks", 15)
-    src = sim.source.Source(lam=lam, spectra=spec, x=x, y=y, ref=[0]*len(x))
+    lam, spec = source.SED("A0V", "Ks", 15)
+    src = source.Source(lam=lam, spectra=spec, x=x, y=y, ref=[0]*len(x))
 
-    sim.run(src, detector_layout="full", filename=filename, mode=mode)
+    run(src, detector_layout="full", filename=filename, mode=mode)
 
 
-
-def _make_snr_grid_fpas(filter_names=["J", "H", "Ks"], mmin=22, mmax=32,
+def _make_snr_grid_fpas(filter_names=None, mmin=22, mmax=32,
                         cmds=None, **kwargs):
     """
     Makes a series of :class:`.Detector` objects containing a grid of stars
@@ -181,6 +185,8 @@ def _make_snr_grid_fpas(filter_names=["J", "H", "Ks"], mmin=22, mmax=32,
     :class:`~simmetis.commands.UserCommands`
 
     """
+    if filter_names is None:
+        filter_names = ["J", "H", "Ks"]
 
     if isinstance(filter_names, str):
         filter_names = [filter_names]
@@ -192,7 +198,7 @@ def _make_snr_grid_fpas(filter_names=["J", "H", "Ks"], mmin=22, mmax=32,
     grids = []
     for filt, cmd in zip(filter_names, cmds):
         if cmd is None:
-            cmd = sim.UserCommands()
+            cmd = UserCommands()
         #cmd["FPA_USE_NOISE"] = "no"
         cmd["OBS_NDIT"] = 1
         cmd["FPA_LINEARITY_CURVE"] = "none"
@@ -201,19 +207,19 @@ def _make_snr_grid_fpas(filter_names=["J", "H", "Ks"], mmin=22, mmax=32,
 
         star_sep = cmd["SIM_DETECTOR_PIX_SCALE"] * 100
 
-        grid = sim.source.star_grid(100, mmin, mmax, filter_name=filt, separation=star_sep)
+        grid = source.star_grid(100, mmin, mmax, filter_name=filt, separation=star_sep)
         grids += [grid]
 
-        hdus, (cmd, opt, fpa) = sim.run(grid,  filter_name=filt, cmds=cmd, return_internals=True)
+        hdus, (cmd, opt, fpa) = run(grid, filter_name=filt, cmds=cmd,
+                                    return_internals=True)
         fpas += [fpa]
 
     return fpas, grid
 
 
-def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
+def _get_limiting_mags(fpas, grid, exptimes, filter_names=None,
                        mmin=22, mmax=32, AB_corrs=None, limiting_sigma=5):
-    """
-    Return the limiting magnitude(s) for filter(s) and exposure time(s)
+    """Return the limiting magnitude(s) for filter(s) and exposure time(s)
 
 
     Parameters
@@ -239,7 +245,7 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
         [mag] A list of magnitude corrections to convert from Vega to AB magnitudes
 
     limiting_sigma : float
-        [\sigma] The number of sigmas to use to define the limiting magnitude.
+        [sigma] The number of sigmas to use to define the limiting magnitude.
         Default is 5*sigma
 
 
@@ -261,6 +267,8 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
     if np.isscalar(AB_corrs):
         AB_corrs = [AB_corrs]*len(fpas)
 
+    if filter_names is None:
+        filter_names = ["J", "H", "Ks"]
 
     if isinstance(filter_names, str):
         filter_names = [filter_names]*len(fpas)
@@ -285,19 +293,19 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
             sigs, nss, snrs, bgs = [], [], [], []
             for n in range(len(x)):
                 dw = 5
-                w = max(dw+5, int((1.-n/len(x))*20))
+                w = max(dw + 5, int((1. - n/len(x)) * 20))
 
                 ps = im[y[n]-w:y[n]+w, x[n]-w:x[n]+w]
 
                 sig = np.copy(ps[dw:-dw, dw:-dw])
-                bg  = np.copy(ps)
+                bg = np.copy(ps)
                 bg[dw:-dw, dw:-dw] = 0
 
-                bgs  += [np.average(bg[bg!=0])]
-                nss  += [np.std(bg[bg!=0]) * np.sqrt(np.sum(bg==0))]
+                bgs += [np.average(bg[bg != 0])]
+                nss += [np.std(bg[bg != 0]) * np.sqrt(np.sum(bg == 0))]
                 sigs += [np.sum(sig - bgs[-1])]
 
-            nss  = np.array(nss)
+            nss = np.array(nss)
             sigs = np.array(sigs)
             snr = sigs/nss
 
@@ -317,7 +325,8 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=["J", "H", "Ks"],
     return mags_all
 
 
-def plot_exptime_vs_limiting_mag(exptimes, limiting_mags, filter_names=["J", "H", "Ks"],
+def plot_exptime_vs_limiting_mag(exptimes, limiting_mags,
+                                 filter_names=None,
                                  colors="bgrcymk", mmin=22, mmax=29,
                                  legend_loc=3, marker="+"):
     """
@@ -352,6 +361,10 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags, filter_names=["J", "H"
 
     import matplotlib.pyplot as plt
 
+    # Set defaults
+    if filter_names is None:
+        filter_names = ["J", "H", "Ks"]
+
     if len(np.shape(limiting_mags)) == 1:
         limiting_mags = [limiting_mags]
     if filter_names is None:
@@ -376,8 +389,8 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags, filter_names=["J", "H"
 
     plt.xlabel("Exposure time [hours]")
     plt.ylabel("Limiting Magnitudes")
-    plt.xlim(np.min(exptimes/3600)-0.1, np.max(exptimes/3600)+0.1)
-    plt.ylim(22,31)
+    plt.xlim(np.min(exptimes/3600) - 0.1, np.max(exptimes/3600) + 0.1)
+    plt.ylim(22, 31)
 
     plt.grid("on")
 
@@ -386,20 +399,21 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags, filter_names=["J", "H"
     for mag, clr in zip(limiting_mags, colors):
         plt.plot(exptimes, mag, clr+marker)
 
-    plt.plot((60*1,60*1),    (mmin, mmax), "k:")
-    plt.text(60*1-5, mmin+0.5, "1 min", horizontalalignment="right")
-    plt.plot((60*4, 60*4),   (mmin, mmax), "k:")
-    plt.text(60*4-5, mmin+0.5, "4 min", horizontalalignment="right")
-    plt.plot((60*15, 60*15), (mmin, mmax), "k:")
-    plt.text(60*15-5, mmin+0.5, "15 min", horizontalalignment="right")
+    plt.plot((60 * 1, 60 * 1), (mmin, mmax), "k:")
+    plt.text(60 * 1 - 5, mmin + 0.5, "1 min", horizontalalignment="right")
+    plt.plot((60 * 4, 60 * 4), (mmin, mmax), "k:")
+    plt.text(60 * 4 - 5, mmin + 0.5, "4 min", horizontalalignment="right")
+    plt.plot((60 * 15, 60 * 15), (mmin, mmax), "k:")
+    plt.text(60 * 15 - 5, mmin + 0.5, "15 min", horizontalalignment="right")
 
-    plt.xlim(10, 1800); plt.ylim(mmin, mmax)
+    plt.xlim(10, 1800)
+    plt.ylim(mmin, mmax)
     plt.semilogx()
     plt.xlabel("Exposure time [sec]")
 
 
 
-def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
+def limiting_mags(exptimes=None, filter_names=None,
                   AB_corrs=None, limiting_sigma=5,
                   return_mags=True, make_graph=False,
                   mmin=22, mmax=31,
@@ -420,7 +434,7 @@ def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
         [mag] A list of magnitude corrections to convert from Vega to AB magnitudes
 
     limiting_sigma : float
-        [\sigma] The number of sigmas to use to define the limiting magnitude.
+        [sigma] The number of sigmas to use to define the limiting magnitude.
         Default is 5*sigma
 
     return_mags : bool
@@ -462,10 +476,14 @@ def limiting_mags(exptimes=[1,60,3600,18000], filter_names=["J", "H", "Ks"],
         ...               make_graph=False)
 
     """
+    # Set default values
+    if exptimes is None:
+        exptimes = [1, 60, 3600, 18000]
+    if filter_names is None:
+        filter_names = ["J", "H", "Ks"]
 
-
-    fpas, grid    = _make_snr_grid_fpas(filter_names, cmds=cmds,
-                                        mmin=mmin, mmax=mmax, **kwargs)
+    fpas, grid = _make_snr_grid_fpas(filter_names, cmds=cmds,
+                                     mmin=mmin, mmax=mmax, **kwargs)
     limiting_mags = _get_limiting_mags(fpas, grid, exptimes, filter_names,
                                        mmin=mmin, mmax=mmax, AB_corrs=AB_corrs,
                                        limiting_sigma=limiting_sigma)
@@ -532,7 +550,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
 
     paranal_bg = {"J" : 16.5, "H" : 14.4, "Ks" : 13.6}
 
-    default_cmds = sim.UserCommands()
+    default_cmds = UserCommands()
     default_cmds["ATMO_EC"] = "none"
     default_cmds["FPA_USE_NOISE"] = "no"
     if filter_name in paranal_bg.keys():
@@ -543,8 +561,8 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
 
     default_cmds.update(kwargs)
 
-    q = sim.simulation._make_snr_grid_fpas(filter_names=[filter_name],
-                                           mmin=mmin, mmax=mmax, cmds=default_cmds)
+    q = _make_snr_grid_fpas(filter_names=[filter_name],
+                            mmin=mmin, mmax=mmax, cmds=default_cmds)
     fpa, src = q[0][0], q[1]
 
     mags = np.linspace(mmin, mmax, 100)
@@ -574,18 +592,18 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
             av, med, std = sigma_clipped_stats(bg_ap[bg_ap != 0])
             bg_stats += [[av, med, std]]
 
-        RON    = default_cmds["FPA_READOUT_MEDIAN"]
+        RON = default_cmds["FPA_READOUT_MEDIAN"]
         bg_med = np.array([s[1] for s in bg_stats])
         bg_std = np.array([s[0] for s in bg_stats])
-        n_pix  = (r*2+1)**2
+        n_pix = (r*2+1)**2
 
         raw = np.array([np.sum(s) for s in sq_aps])
         sig = raw - bg_med * n_pix
 
-        sig_shot    = np.sqrt(sig)
-        bg_shot     = np.sqrt(bg_med * n_pix)
+        sig_shot = np.sqrt(sig)
+        bg_shot = np.sqrt(bg_med * n_pix)
         bg_shot_std = np.sqrt(n_pix) * bg_std
-        e_shot      = np.sqrt(n_pix  * RON**2)
+        e_shot = np.sqrt(n_pix  * RON**2)
 
         tot_err = np.sqrt(sig_shot**2 + bg_shot**2 + e_shot**2)
 
@@ -602,7 +620,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
 
 
 
-def plot_snr_curve(snr_array, mags, snr_markers=[5, 10, 250]):
+def plot_snr_curve(snr_array, mags, snr_markers=None):
     """
     Plots a single ``snr_curve()`` result
 
@@ -628,17 +646,25 @@ def plot_snr_curve(snr_array, mags, snr_markers=[5, 10, 250]):
 
 
     """
+    from matplotlib import pyplot as plt
+
+    # Set defaults
+    if snr_markers is None:
+        snr_markers = [5, 10, 250]
+
     plt.plot(mags, snr_array, "b")
     #plt.plot(x, yfit, "k")
     plt.semilogy()
 
-    mags_markers = np.interp(snr_markers[::-1], snr_array[::-1], mags[::-1])[::-1]
+    mags_markers = np.interp(snr_markers[::-1], snr_array[::-1],
+                             mags[::-1])[::-1]
 
     for snr_val, m, c in zip(snr_markers, mags_markers, "ryg"):
         plt.axhline(snr_val, c=c)
         plt.axvline(m, c=c)
-        plt.text(mags[2], 1.1*snr_val, str(int(snr))+"$\sigma$", color=c)
-        plt.text(m-0.1, 1.3, str(m)[:4], color=c, rotation=90, verticalalignment="bottom", horizontalalignment="right")
+        plt.text(mags[2], 1.1*snr_val, str(int(snr))+r"$\sigma$", color=c)
+        plt.text(m - 0.1, 1.3, str(m)[:4], color=c, rotation=90,
+                 verticalalignment="bottom", horizontalalignment="right")
 
     plt.ylim(ymin=1)
 
@@ -647,7 +673,8 @@ def plot_snr_curve(snr_array, mags, snr_markers=[5, 10, 250]):
 
 
 
-def plot_snr_rainbow(exptimes, mags, snr_array, snr_levels=[5,10,250], text_height=None):
+def plot_snr_rainbow(exptimes, mags, snr_array, snr_levels=None,
+                     text_height=None):
     """
     Plot a nice rainbow curve of the SNR as a function of exposure time and magnitude
 
@@ -677,19 +704,26 @@ def plot_snr_rainbow(exptimes, mags, snr_array, snr_levels=[5,10,250], text_heig
 
 
     """
+    from matplotlib import pyplot as plt
 
-    fig = plt.figure(figsize=(10,5))
-    plt.contour(exptimes, mags, np.array(snr_array).T, snr_levels, colors=list("krygbkkkkkkkk"))
+    # Set defaults
+    if snr_levels is None:
+        snr_levels = [5, 10, 250]
 
-    lvls = list(range(1, 10)) + list(range(10, 100, 10)) + list(range(100, 1001, 100))
-    plt.contourf(exptimes, mags, np.array(snr_array).T, levels=lvls, norm=LogNorm(),
-                            alpha=0.5, cmap="rainbow_r")
+    fig = plt.figure(figsize=(10, 5))
+    plt.contour(exptimes, mags, np.array(snr_array).T, snr_levels,
+                colors=list("krygbkkkkkkkk"))
+
+    lvls = (list(range(1, 10)) + list(range(10, 100, 10))
+            + list(range(100, 1001, 100)))
+    plt.contourf(exptimes, mags, np.array(snr_array).T, levels=lvls,
+                 norm=LogNorm(), alpha=0.5, cmap="rainbow_r")
     clb = plt.colorbar()
-    clb.set_label("Signal to Noise Ratio ($\sigma$)")
+    clb.set_label(r"Signal to Noise Ratio ($\sigma$)")
 
     if text_height is not None:
         for m, s in zip(text_height, snr_levels[::-1]):
-            plt.text(3, m , str(s)+"$\sigma$", rotation=10)
+            plt.text(3, m, str(s)+r"$\sigma$", rotation=10)
 
     plt.grid()
     plt.semilogx()
@@ -699,7 +733,8 @@ def mags_from_snr_array(snr_val, snr_array, mags):
     """
     Returns magnitudes that will have a certain snr from an array returned by ``snr_curve()``
 
-    Note - this is all good, as long as you know the exposure times that correspond to the SNR values
+    Note - this is all good, as long as you know the exposure times that
+    correspond to the SNR values
 
     Parameters
     ----------
@@ -723,7 +758,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     Each time this runs, simmetis runs a full simulation on a grid of stars. Therefore
     if you are interested in the SNR for many difference expoure times and a range of
     magnitudes, it is faster to pass all of them at once to this function. See the
-    exmaple section below.
+    example section below.
 
     Parameters
     ----------
@@ -769,7 +804,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
           8.18183097e-01])]
 
     Now if we were interested in different exposure times, say 10 minutes and 5 hours, for a
-    24th magnitude star in the narrow band Br$\gamma$ filter:
+    24th magnitude star in the narrow band Br$\\gamma$ filter:
 
         >>> # Chekc the name of the Brackett Gamma filter
         >>> [name for name in simmetis.optics.get_filter_set() if "Br" in name]
