@@ -26,6 +26,9 @@ The other two notebooks are for test purposes and may serve illustrative purpose
 
 The L/M band notebook is the simplest as it does not involve chopping or nodding, the N band notebook includes that and also a simple implementation of the N band camera's detector excess low-frequency noise (ELFN).
 
+Notebooks can be opened, viewed and edited using the notebook viewer `jupyter`. They display comments, code as well as results, including plots in-line and are a popular way to share the results of calculations as they can easily be exported to PDF or LaTeX. To open the N band example notebook, `cd`into the notebook directory and execute
+`jupyter notebook SimMETIS_IMG_N.ipynb`
+
 ## Point-Spread Functions
 One of the most critical aspects of imaging simulations is a realistic simulation of the telescope and instrument's point spread function (PSF). In SimMETIS 0.1 two different PSFs are included:
 
