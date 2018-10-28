@@ -5,6 +5,12 @@ In order to run SimMETIS, you need to have installations of `numpy`, `scipy`, `a
 
 We further recommend using the interactive Python shell `iPython` as well as running your scripts in notebook mode using `Jupyter`.
 
+Once SimMETIS is installed, you can find out which versions of these packages are used with
+
+`simmetis.bug_report()`
+
+Please include the output of this command when submitting bug reports. 
+
 ### Installation using pip
 There are numerous ways to install python and its (many) optional packages. One of the easiest ways for normal users is the python package manager [pip](https://pip.pypa.io/en/stable/) and it is described here.
 
