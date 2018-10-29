@@ -15,12 +15,15 @@ Type
 to get an inline help of this particular object.
 
 ## Example notebooks
-There are four example Jupyter (iPython) notebooks in the sub-directory `notebooks`:
+There are five example Jupyter (iPython) notebooks in the sub-directory `notebooks`:
 
+ - `simulate_image.ipynb`
  - `SimMETIS_IMG_LM.ipynb` - `SimMETIS_IMG_N.ipynb` - `SimMETIS_IMG_N_zeropoint.ipynb`
  - `SimMETIS_IMG_Q.ipynb`
 
-`SimMETIS_IMG_LM.ipynb` and `SimMETIS_IMG_N.ipynb` are example simulations for imaging observations in L/M and N band filters and are intended to serve as templates for your own simulations.
+`simulate_image.ipynb` shows how to run SimMETIS on an input image in a specified filter and is intended to serve as template for your own imaging simulations.
+
+`SimMETIS_IMG_LM.ipynb` and `SimMETIS_IMG_N.ipynb` are example simulations for observations of a point source in L/M and N band filters and are intended to serve as templates for your own simulations.
 
 The other two notebooks are for test purposes and may serve illustrative purposes for you, but should not be used for your own simulations (or at least results should be treated with caution). `SimMETIS_IMG_N_zeropoint.ipynb` contains calculations to compare the zeropoint and background flux given by SimMETIS with a simple calculation and also with the values quoted in the METIS fluxes document (by Roy van Boekel). `SimMETIS_IMG_Q.ipynb` is a notebook for Q band imaging, but support for this band is still in development (in this band the entrance window, whose emissivity is not yet included in SimMETIS, contributes significantly to the background photons).
 
@@ -48,3 +51,6 @@ The main SimMETIS configuration files are
 The simulation can be controlled by modifying the mode-specific configuration file, but we recommend not to do that, but instead over-write relevant parameters in the respective notebook. This is demonstrated in the example notebooks where, for example, the filter is explicity set using
 
 `cmd["INST_FILTER_TC"] = "TC_filter_N2.dat"`
+
+## Further documentation
+SimMETIS is based on SimCADO which is [extensively documented](https://www.univie.ac.at/simcado/Home.html). For further information about the underlying classes, methods and structure, please refer to this documentation.
