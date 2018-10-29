@@ -665,3 +665,33 @@ def find_file(filename, path=None, silent=False):
     if not silent:
         print("File cannot be found: " + filename)
     return None
+
+
+def zendist2airmass(zendist):
+    '''Convert zenith distance to airmass
+
+    Parameters
+    ----------
+    zenith distance : [deg]
+       Zenith distance angle
+
+    Returns
+    -------
+    airmass in sec(z) approximation
+    '''
+    return 1. / np.cos(np.deg2rad(zendist))
+
+
+def airmass2zendist(airmass):
+    '''Convert airmass to zenith distance
+
+    Parameters
+    ----------
+    airmass : float (>= 1)
+
+    Returns
+    -------
+    zenith distance in degrees
+    '''
+
+    return np.rad2deg(np.arccos(1/airmass))

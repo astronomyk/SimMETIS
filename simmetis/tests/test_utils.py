@@ -1,10 +1,13 @@
 '''Unit tests for module simmetis.utils'''
 
 import pytest
+import numpy as np
+
 import simmetis as sim
 from simmetis.utils import parallactic_angle, deriv_polynomial2d
 from simmetis.utils import find_file
-import numpy as np
+from simmetis.utils import airmass2zendist
+from simmetis.utils import zendist2airmass
 
 
 class TestFindFile():
@@ -24,6 +27,38 @@ class TestFindFile():
         '''Test: non-extisting file'''
         filename = 'utils987654.pz'
         assert find_file(filename, sim.__search_path__) is None
+
+
+class TestAirmassZendist():
+    '''Tests conversion between airmass and zenith distance'''
+
+    def test_01(self):
+        '''Test for known values of airmass'''
+        assert np.allclose(airmass2zendist(1.0), 0)
+
+    def test_02(self):
+        '''Test for known values of airmass'''
+        assert np.allclose(airmass2zendist(np.sqrt(2)), 45)
+
+    def test_03(self):
+        '''Test for known values of zenith distance'''
+        assert np.allclose(zendist2airmass(0), 1.0)
+
+    def test_04(self):
+        '''Test for known values of zenith distance'''
+        assert np.allclose(zendist2airmass(60), 2.0)
+
+    def test_05(self):
+        '''Test compatibility of functions'''
+        airmass = 1.78974234
+        assert np.allclose(zendist2airmass(airmass2zendist(airmass)),
+                           airmass)
+
+    def test_06(self):
+        '''Test compatibility of functions'''
+        zendist = 12.31334
+        assert np.allclose(airmass2zendist(zendist2airmass(zendist)),
+                           zendist)
 
 
 class TestParallacticAngle():
