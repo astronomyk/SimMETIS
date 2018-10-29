@@ -521,6 +521,11 @@ class UserCommands(object):
         self.fpa_res = self.cmds["SIM_DETECTOR_PIX_SCALE"]
         self.pix_res = self.fpa_res / self.cmds["SIM_OVERSAMPLING"]
 
+        # If OBS_ZENITH_DIST is specified it overrides ATMO_AIRMASS,
+        if self.cmds["OBS_ZENITH_DIST"] is not None:
+            self.cmds["ATMO_AIRMASS"] = \
+                sim.utils.zendist2airmass(self.cmds["OBS_ZENITH_DIST"])
+
         # if SIM_USE_FILTER_LAM is true, then use the filter curve to set the
         # wavelength boundaries where the filter is < SIM_FILTER_THRESHOLD
 
@@ -551,8 +556,6 @@ class UserCommands(object):
 
         self.exptime = self.cmds["OBS_EXPTIME"]
 
-        # TODO clarify use of AIRMASS and ZENITH_DIST
-        self.cmds["ATMO_AIRMASS"] = 1. / np.cos(self.cmds["OBS_ZENITH_DIST"] / 57.3)
 
         # replace 'none', 'None' with None
         self._convert_none()
@@ -619,8 +622,9 @@ class UserCommands(object):
 
         ## get the angle shift for each slice
         lam = np.arange(lam_min, lam_max + 1E-7, 0.001)
+        zenith_distance = sim.utils.airmass2zendist(self.cmds["ATMO_AIRMASS"])
         angle_shift = atmospheric_refraction(lam,
-                                             self.cmds["OBS_ZENITH_DIST"],
+                                             zenith_distance,
                                              self.cmds["ATMO_TEMPERATURE"],
                                              self.cmds["ATMO_REL_HUMIDITY"],
                                              self.cmds["ATMO_PRESSURE"],

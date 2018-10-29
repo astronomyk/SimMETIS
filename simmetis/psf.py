@@ -1253,8 +1253,8 @@ class ADC_PSFCube(DeltaPSFCube):
         [m] height above sea level of the telescope site
     ATMO_REL_HUMIDITY : float
         [%] relative humidity in percent
-    OBS_ZENITH_DIST : float
-        [deg] zenith distance of the object
+    ATMO_AIRMASS : float
+        airmass of the object
     ATMO_TEMPERATURE : float
         [deg C] air temperature of the observing site in Celsius
     ATMO_PRESSURE : float
@@ -1271,7 +1271,7 @@ class ADC_PSFCube(DeltaPSFCube):
                   "SCOPE_LATITUDE"     :-24.5,
                   "SCOPE_ALTITUDE"     :3064,
                   "ATMO_REL_HUMIDITY"  :60,
-                  "OBS_ZENITH_DIST"    :60,
+                  "ATMO_AIRMASS"       :2.,
                   "ATMO_TEMPERATURE"   :0,
                   "ATMO_PRESSURE"      :750}
 
@@ -1281,8 +1281,9 @@ class ADC_PSFCube(DeltaPSFCube):
         effectiveness = params["INST_ADC_PERFORMANCE"] / 100.
 
         ## get the angle shift for each slice
+        zenith_distance = utils.airmass2zendist(params["ATMO_AIRMASS"])
         angle_shift = [utils.atmospheric_refraction(lam,
-                                                    params["OBS_ZENITH_DIST"],
+                                                    zenith_distance,
                                                     params["ATMO_TEMPERATURE"],
                                                     params["ATMO_REL_HUMIDITY"],
                                                     params["ATMO_PRESSURE"],
@@ -1307,7 +1308,7 @@ class ADC_PSFCube(DeltaPSFCube):
         self.info["Type"] = "ADC_psf"
         self.info['description'] = "ADC PSF cube for ADC effectiveness:" + \
                                     str(params["INST_ADC_EFFICIENCY"]) + \
-                                    ", z0:" + str(params["OBS_ZENITH_DIST"])
+                                    ", z0:" + str(params["ATMO_AIRMASS"])
 
 
 
