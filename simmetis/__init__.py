@@ -26,6 +26,12 @@ from . import source
 #from . import defaults
 from . import simulation
 
+# spectro is not yet in source distribution
+try:
+    from . import spectro
+except ImportError:
+    pass
+
 from .version import version as __version__
 
 # import specific Classes from the modules to be accessible in the global

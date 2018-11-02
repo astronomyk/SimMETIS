@@ -8,8 +8,8 @@ from distutils.core import setup
 
 # Version number
 MAJOR = 0
-MINOR = 1
-ATTR = ''
+MINOR = 2
+ATTR = 'dev1'
 VERSION = '%d.%d%s' % (MAJOR, MINOR, ATTR)
 
 
