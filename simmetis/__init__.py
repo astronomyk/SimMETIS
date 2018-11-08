@@ -10,7 +10,7 @@ from os.path import join
 
 from astropy.utils.exceptions import AstropyWarning
 
-# Import all the modules to go under simmetis.detector
+# Import all the modules to go under simmetis
 from . import utils
 
 from . import spectral
