@@ -17,12 +17,11 @@ import os
 import glob
 import warnings
 import logging
-#from datetime import datetime as dt    # unused
 from copy import deepcopy
 
 import numpy as np
 
-from astropy.io import fits      # unused
+from astropy.io import fits
 import astropy.units as u
 
 from . import psf as psf
