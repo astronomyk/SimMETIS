@@ -313,18 +313,24 @@ class OpticalTrain(object):
         etendue = (mirror['Outer']**2 - mirror['Inner']**2) * np.pi/4 \
                   * self.pix_res**2
 
+        # Assume that all (warm) mirrors are at the same temperature)
+        # Mirror specific temperatures could be taken from the list with
+        # temp = mirror['Temp'] within the loop
+        # NOTE: Should this be equal to ATMO_TEMPERATURE?
+        temp = self.cmds["SCOPE_TEMPERATURE"]
+
         for mirror in mirr_list:
             # mirror area projected perpendicular to beam
             area = (mirror['Outer']**2 - mirror['Inner']**2) * np.pi/4 \
                    * np.cos(np.deg2rad(mirror['Angle']))
             angle = np.sqrt(etendue / area)
-            temp = mirror['Temp']
+
             reflectivity = tc_dict[mirror['Coating']].val
             emissivity = 1. - reflectivity
 
             mirror_flux = sc.BlackbodyCurve(lam=self.lam, temp=temp,
                                             pix_res=angle, area=area) * \
-                          emissivity
+                                            emissivity
 
             total_flux = mirror_flux + total_flux * reflectivity
             n_ph_thermal = total_flux.photons_in_range(self.lam_bin_edges[0],
@@ -360,10 +366,10 @@ class OpticalTrain(object):
 
         # Make the transmission curve for the blackbody photons from the mirror
         self.tc_ao = self._gen_master_tc(preset="ao")
-        self.ec_ao = sc.BlackbodyCurve(lam    =self.tc_ao.lam,
-                                       temp   =self.cmds["INST_AO_TEMPERATURE"],
+        self.ec_ao = sc.BlackbodyCurve(lam=self.tc_ao.lam,
+                                       temp=self.cmds["INST_AO_TEMPERATURE"],
                                        pix_res=self.cmds.pix_res,
-                                       area   =ao_area)
+                                       area=ao_area)
         # Really dodgy hack to emulate emissivity - half way between Al and AgAl
         self.ec_ao *= 0.1
 
@@ -393,16 +399,16 @@ class OpticalTrain(object):
 
 
         if "Temp" in mirr_list.colnames:
-        	##
-        	## KL/LB 25 June: manually adding SCOPE_TEMP key to user commands object
-        	##                since we have taken it out of the config files
-            self.cmds.cmds["SCOPE_TEMP"] = mirr_list["Temp"][0]
+            ##
+            ## KL/LB 25 June: manually adding SCOPE_TEMP key to user commands object
+            ##                since we have taken it out of the config files
+            self.cmds.cmds["SCOPE_TEMPERATURE"] = mirr_list["Temp"][0]
         # Make the transmission curve for the blackbody photons from the mirror
         self.tc_mirror = self._gen_master_tc(preset="mirror")
-        self.ec_mirror = sc.BlackbodyCurve(lam    =self.tc_mirror.lam,
-                                           temp   =self.cmds["SCOPE_TEMP"],
+        self.ec_mirror = sc.BlackbodyCurve(lam=self.tc_mirror.lam,
+                                           temp=self.cmds["SCOPE_TEMPERATURE"],
                                            pix_res=self.cmds.pix_res,
-                                           area   =scope_area)
+                                           area=scope_area)
 
         if self.cmds["SCOPE_USE_MIRROR_BG"].lower() == "yes":
             # KL - _gen_thermal_emission() returns the sum of all thermal photons
@@ -456,27 +462,30 @@ class OpticalTrain(object):
                 ################################################################
 
 
-                self.ec_atmo = sc.get_sky_spectrum(fname=self.cmds["ATMO_EC"],
-                                               airmass=self.cmds["ATMO_AIRMASS"],
-                                               return_type="emission",
-                                               area=self.cmds.area,
-                                               pix_res=self.cmds.pix_res)
+                self.ec_atmo = sc.get_sky_spectrum(
+                    fname=self.cmds["ATMO_EC"],
+                    airmass=self.cmds["ATMO_AIRMASS"],
+                    return_type="emission",
+                    area=self.cmds.area,
+                    pix_res=self.cmds.pix_res)
                 lam = self.ec_atmo.lam
                 val = self.ec_atmo.val
 
                 sky_mag = self.cmds["ATMO_BG_MAGNITUDE"]
                 if sky_mag is not None and isinstance(sky_mag, (float, int)):
-                    lam, val = scale_spectrum_sb(lam=lam, spec=val,
-                                                 filter_name=self.cmds["INST_FILTER_TC"],
-                                                 mag_per_arcsec=sky_mag,
-                                                 pix_res=self.cmds.pix_res,
-                                                 return_ec=False)
+                    lam, val = scale_spectrum_sb(
+                        lam=lam, spec=val,
+                        filter_name=self.cmds["INST_FILTER_TC"],
+                        mag_per_arcsec=sky_mag,
+                        pix_res=self.cmds.pix_res,
+                        return_ec=False)
 
-                    self.ec_atmo = sc.EmissionCurve(lam=lam, val=val,
-                                                 pix_res=self.cmds.pix_res,
-                                                 area=self.cmds.area,
-                                                 units="ph/(s m2)",
-                                                 airmass=self.cmds["ATMO_AIRMASS"])
+                    self.ec_atmo = sc.EmissionCurve(
+                        lam=lam, val=val,
+                        pix_res=self.cmds.pix_res,
+                        area=self.cmds.area,
+                        units="ph/(s m2)",
+                        airmass=self.cmds["ATMO_AIRMASS"])
             else:
                 ################## TODO ######################
                 # Generalise this to accept any TransmissionCurve object
