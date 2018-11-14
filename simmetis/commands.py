@@ -10,12 +10,9 @@ that can be accessed directly, instead of from the dictionary.
 UserCommands is imported directly into the simmetis package and is accessible
 from the main package - ``simmetis.UserCommands``
 
-If ``UserCommands`` is called without any arguments, the default values for METIS
-are used.
-
 Classes
 -------
-``UserCommands(filename, default=<path_to_default>)``
+``UserCommands(filename, sim_data_dir=<path to data files>)``
 
 Routines
 --------
@@ -213,7 +210,7 @@ class UserCommands(object):
     """
 
 
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, sim_data_dir=None):
 
         """
         Create an extended dictionary of simulation parameters
@@ -222,7 +219,15 @@ class UserCommands(object):
         ----------
         filename : str, optional
             path to the user's .config file
+        sim_data_dir : str, optional
+            path to directory where instrument data are stored
 
+        SimMETIS needs to know where the instrument-specific data files
+        are stored. This can be specified in the config file (keyword
+        `SIM_DATA_DIR`) or in the call to `UserCommands`. The default
+        configuration file does not include a valid sim_data_dir, hence at
+        least one of the parameters `filename` or `sim_data_dir` must be
+        provided.
         """
 
         logging.info("UserCommands object created")
@@ -236,6 +241,16 @@ class UserCommands(object):
         # read in the users wishes
         if filename is not None:
             self.cmds.update(read_config(filename))
+
+        # option sim_data_dir overrides values in config files
+        if sim_data_dir is not None:
+            self.cmds['SIM_DATA_DIR'] = sim_data_dir
+
+        # If we have no SIM_DATA_DIR from config or parameter, exit.
+        if (self.cmds['SIM_DATA_DIR'] == 'None' or
+            self.cmds['SIM_DATA_DIR'] is None):
+            raise ValueError("""Please specify config file and/or sim_data_dir!""")
+
 
         # add the instrument-specific data directory to the package
         # search path
