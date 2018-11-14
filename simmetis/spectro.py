@@ -3,14 +3,15 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Sat Nov 10 18:33:47 2018
+Last change: Wed Nov 14 15:51:35 2018
 
 Python-script to simulate LMS of METIS
 
 TODO: easy switch for best/median/poor conditions
 """
 
-import sys
+from datetime import datetime
+
 import numpy as np
 
 from scipy.interpolate import interp1d, RectBivariateSpline
@@ -24,6 +25,34 @@ import astropy.convolution as ac
 import matplotlib.pyplot as plt
 
 import simmetis as sm
+import simmetis.spectral as sc
+
+#############################################################################
+
+def _scale_image(img, scale):
+    '''interpolate image to new shape'''
+
+    naxis2, naxis1 = img.shape
+    print("scale_image: old shape =", img.shape)
+
+    in_x = np.arange(naxis1)
+    in_y = np.arange(naxis2)
+    #print(len(in_x))
+
+    # TODO better: scale from the center of the img
+
+    # we need to scale the coord of the last pixel, not the pixel behind the end!
+    out_x = np.arange(round((naxis1-1)*scale)+1) / scale
+    out_y = np.arange(round((naxis2-1)*scale)+1) / scale
+    #print(len(out_x))
+
+    interp = RectBivariateSpline(in_x, in_y, img, kx=1, ky=1)	# bilinear interpol
+    scaled_img = interp(out_x, out_y, grid=True)
+
+    print("scale_image: new shape =", scaled_img.shape)
+
+    return scaled_img
+
 
 #############################################################################
 
@@ -36,10 +65,8 @@ class LMS:
     lambda0: wavelength at zero-point of 3.dimension
     """
 
-    def __init__(self, filename, lambda0=3.8):
+    def __init__(self, filename, config, lambda0=3.8):
         '''Read datacube and WCS'''
-
-        self.det_pixscale = 8.2		# mas/pixel, not quite fixed yet
 
 	# separate our output from the bullshit printed by import
         print('============================================')
@@ -50,9 +77,6 @@ class LMS:
         self.src_fits = fits.open(filename)
         self.src_cube = self.src_fits[0].data
         self.src_header = self.src_fits[0].header
-
-        self.target_cube = self.src_cube
-        self.background = None
 
         naxis3, naxis2, naxis1 = self.src_cube.shape
         print(naxis1, "x", naxis2, "pixels,", naxis3, "spectral channels")
@@ -138,38 +162,41 @@ class LMS:
         print("Detector velocities:", self.det_velocities.shape,
               self.det_velocities[0], "...", self.det_velocities[-1])
 
+        # initialize the target cube, in case someone does not call transmission_emission()
+
+        self.target_cube = self.src_cube
+        self.target_hdr = self.src_header.copy()
+        self.target_hdr['BUNIT'] = 'Jy/arcsec2'
+        self.background = None
+
         self.emission = None	# will be computed later
 
         # initialize SimCADO to set searchpaths
         #
-        self.cmds = sm.UserCommands('metis_image_generic.config')
+        print("Reading config ", config)
+        self.cmds = sm.UserCommands(config)
+
+        self.det_pixscale = 8.2		# mas/pixel, not quite fixed yet
 
 
     #############################################################################
 
-    def _scale_image(self, img, scale):
-        '''interpolate image to new shape'''
+    def make_target_header(self):
 
-        naxis2, naxis1 = img.shape
-        print("scale_image: old shape =", img.shape)
+        self.target_hdr['DATE'] = datetime.now().isoformat()
 
-        in_x = np.arange(naxis1)
-        in_y = np.arange(naxis2)
-        #print(len(in_x))
+        for key in self.cmds.cmds:
+            val = self.cmds.cmds[key]
 
-        # TODO better: scale from the center of the img
+            if isinstance(val, (sc.TransmissionCurve, sc.EmissionCurve,
+                                sc.UnityCurve, sc.BlackbodyCurve)):
+                val = val.params["filename"]
 
-        # we need to scale the coord of the last pixel, not the pixel behind the end!
-        out_x = np.arange(round((naxis1-1)*scale)+1) / scale
-        out_y = np.arange(round((naxis2-1)*scale)+1) / scale
-        #print(len(out_x))
+            if isinstance(val, str) and len(val) > 35:
+                val = "... " + val[-35:]
 
-        interp = RectBivariateSpline(in_x, in_y, img, kx=1, ky=1)	# bilinear interpol
-        scaled_img = interp(out_x, out_y, grid=True)
+            self.target_hdr["HIERARCH "+key] = val
 
-        print("scale_image: new shape =", scaled_img.shape)
-
-        return scaled_img
 
 
     #############################################################################
@@ -285,11 +312,12 @@ class LMS:
         #
         # transmit the source cube!
         #
-        self.src_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
+        self.target_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
+        self.make_target_header()
 
         if plot:
             print("Plotting pixel [111,100] from transmitted cube")
-            plt.plot(self.wavelen, self.src_cube[:,111,100])
+            plt.plot(self.wavelen, self.target_cube[:,111,100])
             plt.title("Pixel [111,100] in transmitted cube")
             plt.show()
 
@@ -319,7 +347,7 @@ class LMS:
         mirr_list = self.cmds.mirrors_telescope
         mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
                                        mirr_list["Inner"]**2)
-        print("Mirror area: ", mirr_area,"[m^2]")
+        print("Mirror area: ", mirr_area, "[m^2]")
 
         ph_atmo_um = emission * mirr_area * tc_trans(det_wavelen)
         ph_mirrors = ph_mirror(det_wavelen)
@@ -338,7 +366,7 @@ class LMS:
     #############################################################################
 
     def convolve_psf(self, psf_name, write_psf=None, plot=False):
-        '''Convolve src_sube with Point Spread Function'''
+        '''Convolve target_cube with Point Spread Function'''
 
         print("-----Convolution with PSF-----")
 
@@ -363,27 +391,27 @@ class LMS:
         scale = psf_pixscale / self.src_pixscale[0].value
         print("Scale factor", scale)
 
-        psf_scaled = self._scale_image(psf_img, scale)
+        psf_scaled = _scale_image(psf_img, scale)
 
         norm = np.sum(psf_scaled)
         print("Normalizing PSF by factor", norm)
         psf_scaled /= norm
 
-        # crop to size needed for inout data
+        # crop to size needed for input data
         # parameters found empirically to center peak of PSF
         # (would be better if _scale_image would scale from the center)
 
         psf_center = np.asarray(psf_scaled.shape) // 2
-        img_shape = self.src_cube.shape[1:3]
+        img_shape = self.target_cube.shape[1:3]
         print("Cropping PSF to [",
-              psf_center[0]-img_shape[0],":",psf_center[0]+img_shape[0]+1,",",
-              psf_center[1]-img_shape[1],":",psf_center[1]+img_shape[1]+1,"]")
+              psf_center[0]-img_shape[0], ":", psf_center[0]+img_shape[0]+1, ",",
+              psf_center[1]-img_shape[1], ":", psf_center[1]+img_shape[1]+1, "]")
 
         psf_scaled = psf_scaled[(psf_center[0]-img_shape[0]):(psf_center[0]+img_shape[0]+1),
                                 (psf_center[1]-img_shape[1]):(psf_center[1]+img_shape[1]+1)]
 
-        if write_psf != None:
-            print("Writing scaled PSF to ",write_psf)
+        if write_psf is not None:
+            print("Writing scaled PSF to ", write_psf)
             psf_hdr['EXTNAME'] = None
             hdu = fits.PrimaryHDU(psf_scaled)
             hdu.header['WAVELENG'] = np.mean(self.wavelen)
@@ -393,14 +421,14 @@ class LMS:
         #############################################################################
         print("Convolving with PSF...")
 
-        for i in range(self.src_cube.shape[0]):
-            print(self.src_cube.shape[0]-i, end=' ', flush=True)
-            self.src_cube[i,:,:] = ac.convolve_fft(self.src_cube[i,:,:], psf_scaled)
+        for i in range(self.target_cube.shape[0]):
+            print(self.target_cube.shape[0]-i, end=' ', flush=True)
+            self.target_cube[i,:,:] = ac.convolve_fft(self.target_cube[i,:,:], psf_scaled)
             # Note: convolve_fft sets values outside the image bounds to 0.
 
         print()
         if plot:
-            plt.plot(self.src_cube[:,111,100])
+            plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with PSF")
 
 
@@ -431,15 +459,15 @@ class LMS:
 
         gauss = ac.Gaussian1DKernel(stddev)
 
-        for i_x in range(self.src_cube.shape[2]):
-            print(self.src_cube.shape[2]-i_x, end=' ', flush=True)
-            for i_y in range(self.src_cube.shape[1]):
-                self.src_cube[:,i_y,i_x] = ac.convolve_fft(self.src_cube[:,i_y,i_x],
-                                                           gauss, boundary='wrap')
+        for i_x in range(self.target_cube.shape[2]):
+            print(self.target_cube.shape[2]-i_x, end=' ', flush=True)
+            for i_y in range(self.target_cube.shape[1]):
+                self.target_cube[:,i_y,i_x] = ac.convolve_fft(self.target_cube[:,i_y,i_x],
+                                                              gauss, boundary='wrap')
 
         print()
         if plot:
-            plt.plot(self.src_cube[:,111,100])
+            plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with LSF")
             plt.show()
 
@@ -452,7 +480,7 @@ class LMS:
 
         # First interpolate spectrally
 
-        naxis3, naxis2, naxis1 = self.src_cube.shape
+        naxis3, naxis2, naxis1 = self.target_cube.shape
 
         wavelen = self.wavelen * u.um	# store units in self?
         in_velos = wavelen.to(u.m/u.s, equivalencies=u.doppler_optical(self.restcoo))
@@ -463,16 +491,16 @@ class LMS:
         #print("New velos:", out_velos.shape, out_velos[0], "...", out_velos[-1])
         #print(out_velos)
 
-        scaled_cube = np.empty((len(out_velos), naxis2, naxis1), self.src_cube[0,0,0].dtype)
+        scaled_cube = np.empty((len(out_velos), naxis2, naxis1), self.target_cube[0,0,0].dtype)
 
         for i_x in range(naxis2):
             #print(i_x, end=' ',flush=True)
             for i_y in range(naxis1):
-                intpol = interp1d(in_velos, self.src_cube[:, i_y, i_x],
+                intpol = interp1d(in_velos, self.target_cube[:, i_y, i_x],
                                   kind='linear', bounds_error=False, fill_value=0.)
                 scaled_cube[:, i_y, i_x] = intpol(out_velos)
         print()
-        self.src_cube = scaled_cube
+        self.target_cube = scaled_cube
 
         self.wcs.wcs.ctype[2] = 'VELO'
         self.wcs.wcs.crpix[2] = 1
@@ -482,7 +510,7 @@ class LMS:
         #
         # Now interpolate spatially
         #
-        naxis3, naxis2, naxis1 = self.src_cube.shape
+        naxis3, naxis2, naxis1 = self.target_cube.shape
         print("ScaleToDetector: naxis =", naxis1, naxis2, naxis3)
 
         in_x = np.arange(naxis1)
@@ -501,28 +529,30 @@ class LMS:
         out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
         print(len(out_x), len(out_y))
 
-        scaled_cube = np.empty((naxis3, len(out_y), len(out_x)), self.src_cube[0,0,0].dtype)
+        scaled_cube = np.empty((naxis3, len(out_y), len(out_x)), self.target_cube[0,0,0].dtype)
 
-        for l in range(naxis3):
+        for i in range(naxis3):
             # bilinear interpol
-            interp = RectBivariateSpline(in_x, in_y, self.src_cube[l,:,:], kx=1, ky=1)
-            scaled_cube[l,:,:] = interp(out_x, out_y, grid=True)
+            interp = RectBivariateSpline(in_x, in_y, self.target_cube[i,:,:], kx=1, ky=1)
+            scaled_cube[i,:,:] = interp(out_x, out_y, grid=True)
 
         print("ScaleToDetector: new shape =", scaled_cube.shape)
 
-        self.src_cube = scaled_cube
+        self.target_cube = scaled_cube
 
         self.wcs.wcs.cdelt[0] = -self.det_pixscale/3600./1000.	# convert mas/pix to deg/pix
         self.wcs.wcs.cdelt[1] =  self.det_pixscale/3600./1000.
         self.wcs.wcs.cunit[0] = 'deg'
         self.wcs.wcs.cunit[1] = 'deg'
 
-        self.src_header = self.wcs.to_header()
+	# overwrite old WCS, but keep rest of the header
+        for card in self.wcs.to_header().cards:
+            self.target_hdr[card.keyword] = (card.value, card.comment)
 
 
     #############################################################################
 
-    def compute_snr(self, integration_time):
+    def compute_snr(self, integration_time, write_src_w_bg=None, write_background=None):
         '''Compute SNR of the simulated observation (step 4 of the big plan)'''
 
         mirr_list = self.cmds.mirrors_telescope
@@ -530,7 +560,7 @@ class LMS:
                                        mirr_list["Inner"]**2) * u.m**2
         print("Collecting mirror area: ", mirr_area)
 
-        ph_cube = self.src_cube * u.Jy * mirr_area
+        ph_cube = self.target_cube * u.Jy * mirr_area
 	# per arcsec^2, but astropy cannot convert that
         ph_cube = ph_cube.to(u.photon / (u.s * u.um),
                              equivalencies=u.spectral_density(self.restcoo)) / (u.arcsec**2)
@@ -538,10 +568,10 @@ class LMS:
         print("Source peak:", np.max(ph_cube))
         print(ph_cube.shape)
 
-        # wavelength of new src_cube frames in micron (not the same as self.wavelen!)
+        # wavelength of new target_cube frames in micron (not the same as self.wavelen!)
         wavelen = (self.det_velocities
                    * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
-        print("Wavelength grid:",wavelen.shape)
+        print("Wavelength grid:", wavelen.shape)
 
         backgrnd = self.emission * u.photon / (u.s*u.um*u.arcsec**2)
         print("Background max:", np.max(backgrnd))
@@ -611,15 +641,23 @@ class LMS:
         ph_cube += targ_noise
         bg_cube += back_noise
 
-        hdu = fits.PrimaryHDU(ph_cube.value, header=self.src_header)
-        hdu.writeto("test_src+bg.fits", overwrite=True)
+        header = self.target_hdr.copy()
+        header['BUNIT'] = "e/pixel"
 
-        hdu = fits.PrimaryHDU(bg_cube.value, header=self.src_header)
-        hdu.writeto("test_bg.fits", overwrite=True)
+        if write_src_w_bg is not None:
+            hdu = fits.PrimaryHDU(ph_cube.value, header=header)
+            hdu.writeto(write_src_w_bg, overwrite=True)
+
+        if write_background is not None:
+            hdu = fits.PrimaryHDU(bg_cube.value, header=header)
+            hdu.writeto(write_background, overwrite=True)
 
         ph_cube -= bg_cube
-        hdu = fits.PrimaryHDU(ph_cube.value, header=self.src_header)
-        hdu.writeto("test_src-bg.fits", overwrite=True)
+        hdu = fits.PrimaryHDU(ph_cube.value, header=header)
+
+        #hdu.writeto("test_src-bg.fits", overwrite=True)
+
+        return hdu
 
 
     #############################################################################
@@ -627,13 +665,13 @@ class LMS:
     def save_cube(self, outname):
         '''write the data cube to a fits-file'''
 
-        hdu = fits.PrimaryHDU(self.src_cube, header=self.src_header)
+        hdu = fits.PrimaryHDU(self.target_cube, header=self.target_hdr)
         hdu.writeto(outname, overwrite=True)
 
 
     #############################################################################
 
-    def simulate(self,conditions,psf_name,integration_time,plot=False):
+    def simulate(self, conditions, psf_name, integration_time, plot=False):
         '''run a LMS simulation'''
 
         self.transmission_emission(conditions=conditions, plot=plot)
