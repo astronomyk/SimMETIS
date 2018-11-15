@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# coding=latin1
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Wed Nov 14 17:28:18 2018
+Last change: Thu Nov 15 16:20:38 2018
 
 Python-script to simulate LMS of METIS
 
@@ -371,6 +369,8 @@ class LMS:
         if self.src_pixscale[0] != self.src_pixscale[1]:
             print("pixels are not square!  Bad things will happen!")
 
+        psf_name = sm.utils.find_file(psf_name)
+        print("Reading PSF", psf_name)
         psf_fits = fits.open(psf_name)
 
         ext = psf_fits.index_of("PSF_3.80UM")
@@ -674,7 +674,7 @@ class LMS:
         self.convolve_psf(psf_name, plot=plot)
         self.convolve_lsf(plot=plot)
         self.scale_to_detector()
-        self.compute_snr(integration_time)
+        result = self.compute_snr(integration_time)
 
 
 #############################################################################
