@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .cache
 
+# local files
+git-ignored/
+
 # Distribution / packaging
 .Python
 build/
