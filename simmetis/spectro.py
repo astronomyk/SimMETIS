@@ -3,7 +3,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Wed Nov 14 15:51:35 2018
+Last change: Wed Nov 14 17:28:18 2018
 
 Python-script to simulate LMS of METIS
 
@@ -176,7 +176,10 @@ class LMS:
         print("Reading config ", config)
         self.cmds = sm.UserCommands(config)
 
-        self.det_pixscale = 8.2		# mas/pixel, not quite fixed yet
+        self.det_pixscale = self.cmds["SIM_DETECTOR_PIX_SCALE"] * 1000.	 # in mas/pixel
+
+        print("Pixel scale ",self.det_pixscale," mas/pixel")
+        print("Filter = ",self.cmds["INST_FILTER_TC"])	# should be open filter
 
 
     #############################################################################
@@ -252,7 +255,9 @@ class LMS:
         # interpolate transmission/emission onto source-grid
         #
         transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
-        emission     = np.interp(det_wavelen, skylam, skyemis)  # photons/s/um/m^2/arcsec^2
+
+        sky_emission = np.interp(det_wavelen, skylam, skyemis) * (self.det_pixscale/1000.)**2
+        # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
             print("Plotting sky transmission in source wavelength range...")
@@ -267,14 +272,6 @@ class LMS:
         # TODO: set best/median/poor conditions in optical train
         #
         print("Steaming up optical train")
-
-        self.cmds["SIM_VERBOSE"] = 'hell no!'
-        self.cmds["INST_FILTER_TC"] = "TC_filter_open.dat"
-	# open filter, but remember that the detector cuts off at 5.5um
-
-        self.cmds["SIM_DETECTOR_PIX_SCALE"] = 1.
-        # We set the pixel size to 1 arcsec^2, this will give us emission per arcsec^2
-        # TODO: use real pixel size in confg, get it from cmds instead?
 
         # Create transmission curve.
         opttrain = sm.OpticalTrain(self.cmds)
@@ -349,7 +346,7 @@ class LMS:
                                        mirr_list["Inner"]**2)
         print("Mirror area: ", mirr_area, "[m^2]")
 
-        ph_atmo_um = emission * mirr_area * tc_trans(det_wavelen)
+        ph_atmo_um = sky_emission * mirr_area * tc_trans(det_wavelen)
         ph_mirrors = ph_mirror(det_wavelen)
 
         if plot:
@@ -360,7 +357,7 @@ class LMS:
             plt.title("Emission")
             plt.show()
 
-        self.emission = ph_atmo_um+ph_mirrors	# photons/s/um/arcsec2 - change to /pixel?
+        self.background = ph_atmo_um+ph_mirrors 	# photons/s/um/pixel
 
 
     #############################################################################
@@ -573,7 +570,7 @@ class LMS:
                    * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
         print("Wavelength grid:", wavelen.shape)
 
-        backgrnd = self.emission * u.photon / (u.s*u.um*u.arcsec**2)
+        backgrnd = self.background * u.photon / (u.s*u.um)
         print("Background max:", np.max(backgrnd))
 
         # dLambda = lambda * dv/c
@@ -584,14 +581,13 @@ class LMS:
         print("Pixel area", pix_area)
 
         ph_cube *= d_lambda*pix_area
-        backgrnd *= d_lambda*pix_area
+        backgrnd *= d_lambda	# per pixel
 
         print("peak pos:", np.unravel_index(np.argmax(ph_cube), ph_cube.shape))
 
         print("Source peak:", np.max(ph_cube))
         print("Background: ", np.max(backgrnd))
 
-        #self.emission*d_lambda*, "ph/s/pix")
         plt.plot(wavelen, ph_cube[:,52,51])
         plt.plot(wavelen, backgrnd)
         plt.title("Pixel [52,51] in photons/sec")
