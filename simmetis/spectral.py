@@ -601,8 +601,7 @@ class BlackbodyCurve(EmissionCurve):
         if np.any(exparg.si > 500):  # Wien approximation to avoid overflow
             I = 2. * c.h * c.c**2 /(lam * u.um)**5 * np.exp(-exparg)
         else:                        # Full Planck formula
-            I = 2. * c.h * c.c**2 / (lam * u.um)**5 / \
-                (np.exp(c.h * c.c / (c.k_B * (temp*u.K) * (lam*u.um))) - 1.)
+            I = 2. * c.h * c.c**2 / (lam * u.um)**5 / (np.exp(exparg) - 1.)
 
         I = I / u.sr    # make it explicit that this is per steradian
 
