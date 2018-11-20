@@ -1733,7 +1733,7 @@ def empty_sky():
     sky : Source
 
     """
-    sky = Source(lam=np.linspace(0.3, 3.0, 271),
+    sky = Source(lam=np.linspace(3, 18.31, 271),
                  spectra=np.zeros((1, 271)),
                  x=[0], y=[0], ref=[0], weight=[0])
     return sky
@@ -2139,7 +2139,7 @@ def source_from_image(images, lam, spectra, plate_scale, oversample=1,
 
     .. note::
         ``plate_scale`` is the original plate scale of the images. If this is
-        not the same as the plate scale of the ``Detector`` 
+        not the same as the plate scale of the ``Detector``
         then you will need to specify oversample to interpolate between the two
         scales. I.e.  oversample = Image plate scale / Detector plate scale
 
