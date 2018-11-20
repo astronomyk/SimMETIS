@@ -398,26 +398,18 @@ class OpticalTrain(object):
                                         mirr_list["Inner"]**2)
 
 
-        if "Temp" in mirr_list.colnames:
-            ##
-            ## KL/LB 25 June: manually adding SCOPE_TEMP key to user commands object
-            ##                since we have taken it out of the config files
-            self.cmds.cmds["SCOPE_TEMPERATURE"] = mirr_list["Temp"][0]
         # Make the transmission curve for the blackbody photons from the mirror
         self.tc_mirror = self._gen_master_tc(preset="mirror")
-        self.ec_mirror = sc.BlackbodyCurve(lam=self.tc_mirror.lam,
-                                           temp=self.cmds["SCOPE_TEMPERATURE"],
-                                           pix_res=self.cmds.pix_res,
-                                           area=scope_area)
 
         if self.cmds["SCOPE_USE_MIRROR_BG"].lower() == "yes":
             # KL - _gen_thermal_emission() returns the sum of all thermal photons
             # not just the ones that pass through the system transmission curve
             # Add the 3rd line here to correct this
             self.n_ph_mirror, self.ec_mirror = self._gen_thermal_emission()
-            self.ph_mirror   = self.ec_mirror * self.tc_mirror
-            self.n_ph_mirror = self.ph_mirror.photons_in_range(self.lam_bin_edges[0],
-                                                               self.lam_bin_edges[-1])
+            self.ph_mirror = self.ec_mirror * self.tc_mirror
+            self.n_ph_mirror = self.ph_mirror.photons_in_range(
+                self.lam_bin_edges[0],
+                self.lam_bin_edges[-1])
         else:
             self.ec_mirror = None
             self.ph_mirror = None
