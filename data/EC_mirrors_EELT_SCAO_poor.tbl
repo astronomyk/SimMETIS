@@ -1,0 +1,2 @@
+#Mirror     Outer   Inner   Angle  Temp    Coating
+M1          38.0    11.1    0.     21.     TC_mirror_emissivity_poor.dat

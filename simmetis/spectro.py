@@ -1,11 +1,9 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Thu Nov 15 16:20:38 2018
+Last change: Wed Nov 21 15:43:57 2018
 
 Python-script to simulate LMS of METIS
-
-TODO: easy switch for best/median/poor conditions
 """
 
 from datetime import datetime
@@ -152,7 +150,7 @@ class LMS:
         print("new naxis3:", new3)
 
         meanv = (in_velos[0] + in_velos[-1]) / 2.
-        print("middle v:", meanv)
+        #print("middle v:", meanv)
 
         self.det_velocities = np.arange((meanv-step*(new3-1)/2.).to(u.m/u.s).value,
                                         (meanv+step*((new3-1)/2.+1)).to(u.m/u.s).value,
@@ -176,7 +174,7 @@ class LMS:
 
         self.det_pixscale = self.cmds["SIM_DETECTOR_PIX_SCALE"] * 1000.	 # in mas/pixel
 
-        print("Pixel scale ",self.det_pixscale," mas/pixel")
+        print("Detector pixel scale ",self.det_pixscale," mas/pixel")
         print("Filter = ",self.cmds["INST_FILTER_TC"])	# should be open filter
 
 
@@ -206,29 +204,33 @@ class LMS:
         '''
         Apply transission to src_cube and calculate emission spectrum
         '''
-
-        print("-----Transmission and Emission-----")
+        print()
+        print("--------------------Transmission and Emission--------------------")
         if plot:
-            print("Plotting pixel [111,100] from source cube")
             plt.plot(self.wavelen, self.src_cube[:,111,100])
             plt.title("Pixel [111,100] in source cube")
             plt.show()
 
         # calculate wavelens of detector, needed for emission
         #
-        det_wavelen = self.det_velocities * u.m/u.s
-        det_wavelen = det_wavelen.to(u.um, equivalencies=u.doppler_optical(self.restcoo))
+        det_wavelen = (self.det_velocities
+                       * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
 
         #############################################################################
         # Read in trans-/emission from skycal
-        # TODO: set config and/or telescope parameters, too
-
+        #
         if conditions == 'best':
             skyfile = 'skycal_R308296_best_conditions.fits'
+            self.cmds["SCOPE_TEMPERATURE"] = 258.-273.
+            self.cmds["SCOPE_MIRROR_LIST"] = "EC_mirrors_EELT_SCAO_best.tbl"
         elif conditions == 'median':
             skyfile = 'skycal_R308296_median_conditions.fits'
+            self.cmds["SCOPE_TEMPERATURE"] = 282.-273.
+            self.cmds["SCOPE_MIRROR_LIST"] = "EC_mirrors_EELT_SCAO_median.tbl"
         elif conditions == 'poor':
             skyfile = 'skycal_R308296_poor_conditions.fits'
+            self.cmds["SCOPE_TEMPERATURE"] = 294.-273.
+            self.cmds["SCOPE_MIRROR_LIST"] = "EC_mirrors_EELT_SCAO_poor.tbl"
         else:
             raise ValueError('Undefined conditions "'+conditions+
                              '", only "best", "median", and "poor" are defined')
@@ -258,18 +260,15 @@ class LMS:
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
-            print("Plotting sky transmission in source wavelength range...")
             plt.plot(skylam[idx], skytran[idx], "+")
             plt.plot(self.wavelen, transmission)
-            plt.title("Transmission")
             #plt.show()
 
         #############################################################################
         # get trans-/emission from SimMETIS
         #
-        # TODO: set best/median/poor conditions in optical train
-        #
         print("Steaming up optical train")
+        print("Telescope temperature:", self.cmds["SCOPE_TEMPERATURE"])
 
         # Create transmission curve.
         opttrain = sm.OpticalTrain(self.cmds)
@@ -292,13 +291,12 @@ class LMS:
         # ph_mirror= _gen_thermal_emission (based on SCOPE_MIRROR_LIST) * tc_mirror
         # ph_atmo  = atmospheric emission * tc_atmo
         #
-        tc_lam = opttrain.tc_atmo.lam
-        tc_val = opttrain.tc_atmo.val
-        tc_trans = interp1d(tc_lam, tc_val, kind='linear', bounds_error=False, fill_value=0.)
+        tc_trans = interp1d(opttrain.tc_atmo.lam, opttrain.tc_atmo.val,
+                            kind='linear', bounds_error=False, fill_value=0.)
 
         if plot:
-            print("Plotting SimMetis-transmission in source wavelength range...")
             plt.plot(self.wavelen, tc_trans(self.wavelen))
+            plt.title("Sky & Telescope Transmission")
             plt.show()
 
         transmission *= tc_trans(self.wavelen)
@@ -311,7 +309,6 @@ class LMS:
         self.make_target_header()
 
         if plot:
-            print("Plotting pixel [111,100] from transmitted cube")
             plt.plot(self.wavelen, self.target_cube[:,111,100])
             plt.title("Pixel [111,100] in transmitted cube")
             plt.show()
@@ -348,14 +345,15 @@ class LMS:
         ph_mirrors = ph_mirror(det_wavelen)
 
         if plot:
-            print("Plotting atmospheric & mirror emission...")
             plt.plot(det_wavelen, ph_atmo_um, '+')
             plt.plot(det_wavelen, ph_mirrors)
             plt.plot(det_wavelen, ph_atmo_um+ph_mirrors)
-            plt.title("Emission")
+            plt.title("Sky & Mirror Emission")
             plt.show()
 
         self.background = ph_atmo_um+ph_mirrors 	# photons/s/um/pixel
+
+        print("Final telescope temperature:", opttrain.cmds["SCOPE_TEMPERATURE"])
 
 
     #############################################################################
@@ -363,7 +361,8 @@ class LMS:
     def convolve_psf(self, psf_name, write_psf=None, plot=False):
         '''Convolve target_cube with Point Spread Function'''
 
-        print("-----Convolution with PSF-----")
+        print()
+        print("--------------------Convolution with PSF--------------------")
 
         print("image pixscale from WCS:", self.src_pixscale, "/ pixel")
         if self.src_pixscale[0] != self.src_pixscale[1]:
@@ -419,11 +418,12 @@ class LMS:
         print("Convolving with PSF...")
 
         for i in range(self.target_cube.shape[0]):
-            print(self.target_cube.shape[0]-i, end=' ', flush=True)
+            #print(self.target_cube.shape[0]-i, end=' ', flush=True)
+            print(" ",i*100//(self.target_cube.shape[0]-1), end='% \r', flush=True)
             self.target_cube[i,:,:] = ac.convolve_fft(self.target_cube[i,:,:], psf_scaled)
             # Note: convolve_fft sets values outside the image bounds to 0.
 
-        print()
+        print("       ",end='\r')
         if plot:
             plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with PSF")
@@ -436,7 +436,8 @@ class LMS:
         # TODO: interpolate to velocity-grid before convolving
         #	to make sure we have linear spacing
 
-        print("-----Convolution with LSF-----")
+        print()
+        print("--------------------Convolution with LSF--------------------")
 
         delta_wave = np.mean(self.wavelen[1:] - self.wavelen[:-1])
         print("step in wavelen:", delta_wave)
@@ -457,12 +458,14 @@ class LMS:
         gauss = ac.Gaussian1DKernel(stddev)
 
         for i_x in range(self.target_cube.shape[2]):
-            print(self.target_cube.shape[2]-i_x, end=' ', flush=True)
+            #print(self.target_cube.shape[2]-i_x, end=' ', flush=True)
+            if i_x % 2 == 0:
+                print("\r ",i_x*100//(self.target_cube.shape[2]-1), end='% \r', flush=True)
             for i_y in range(self.target_cube.shape[1]):
                 self.target_cube[:,i_y,i_x] = ac.convolve_fft(self.target_cube[:,i_y,i_x],
                                                               gauss, boundary='wrap')
 
-        print()
+        print("       ",end='\r')
         if plot:
             plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with LSF")
@@ -479,8 +482,8 @@ class LMS:
 
         naxis3, naxis2, naxis1 = self.target_cube.shape
 
-        wavelen = self.wavelen * u.um	# store units in self?
-        in_velos = wavelen.to(u.m/u.s, equivalencies=u.doppler_optical(self.restcoo))
+        in_velos = (self.wavelen * u.um).to(u.m/u.s,
+                                            equivalencies=u.doppler_optical(self.restcoo))
 
         #print("Original velos:", in_velos[0], "...", in_velos[-1])
 
@@ -524,7 +527,6 @@ class LMS:
         # we need to scale the coord of the last pixel, not the pixel behind the end!
         out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
         out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
-        print(len(out_x), len(out_y))
 
         scaled_cube = np.empty((naxis3, len(out_y), len(out_x)), self.target_cube[0,0,0].dtype)
 
@@ -549,7 +551,7 @@ class LMS:
 
     #############################################################################
 
-    def compute_snr(self, integration_time, write_src_w_bg=None, write_background=None):
+    def compute_snr(self, integration_time, write_src_w_bg=None, write_background=None, plot=False):
         '''Compute SNR of the simulated observation (step 4 of the big plan)'''
 
         mirr_list = self.cmds.mirrors_telescope
@@ -564,11 +566,6 @@ class LMS:
 
         print("Source peak:", np.max(ph_cube))
         print(ph_cube.shape)
-
-        # wavelength of new target_cube frames in micron (not the same as self.wavelen!)
-        wavelen = (self.det_velocities
-                   * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
-        print("Wavelength grid:", wavelen.shape)
 
         backgrnd = self.background * u.photon / (u.s*u.um)
         print("Background max:", np.max(backgrnd))
@@ -588,10 +585,11 @@ class LMS:
         print("Source peak:", np.max(ph_cube))
         print("Background: ", np.max(backgrnd))
 
-        plt.plot(wavelen, ph_cube[:,52,51])
-        plt.plot(wavelen, backgrnd)
-        plt.title("Pixel [52,51] in photons/sec")
-        #plt.show()
+        if plot:
+            plt.plot(self.det_velocities * u.m/u.s, ph_cube[:,52,51])
+            plt.plot(self.det_velocities * u.m/u.s, backgrnd)
+            plt.title("Pixel [52,51] in photons/sec")
+            #plt.show()
         #
         # NOTE: SimMETIS.OpticalTrain includes the QE of the detector
         #       our units are actually electrons/s
@@ -603,15 +601,15 @@ class LMS:
 
         ph_cube += bg_cube
 
-        plt.plot(wavelen, ph_cube[:,52,51])
-        plt.title("Pixel [52,51] with background")
-        plt.show()
+        if plot:
+            plt.plot(self.det_velocities * u.m/u.s, ph_cube[:,52,51])
+            plt.title("Pixel [52,51] with background")
+            plt.show()
 
         # Decide on the DIT to use, full well = 100e3, we fill to 80%
 
-        peak = np.max(ph_cube)
-        dit = 80e3 * u.photon / peak
-        print("Peak", peak, ", using DIT", dit)
+        dit = 80e3 * u.photon / np.max(ph_cube)
+        print("Peak", np.max(ph_cube), ", using DIT", dit)
 
         ph_cube *= dit
         bg_cube *= dit
@@ -650,9 +648,6 @@ class LMS:
 
         ph_cube -= bg_cube
         hdu = fits.PrimaryHDU(ph_cube.value, header=header)
-
-        #hdu.writeto("test_src-bg.fits", overwrite=True)
-
         return hdu
 
 
@@ -674,7 +669,7 @@ class LMS:
         self.convolve_psf(psf_name, plot=plot)
         self.convolve_lsf(plot=plot)
         self.scale_to_detector()
-        result = self.compute_snr(integration_time)
+        return self.compute_snr(integration_time, plot=plot)
 
 
 #############################################################################
