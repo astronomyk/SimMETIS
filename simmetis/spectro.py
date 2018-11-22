@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Wed Nov 21 15:43:57 2018
+Last change: Wed Nov 21 22:06:58 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -180,9 +180,9 @@ class LMS:
 
     #############################################################################
 
-    def make_target_header(self):
+    def add_cmds_to_header(self, header):
 
-        self.target_hdr['DATE'] = datetime.now().isoformat()
+        header['DATE'] = datetime.now().isoformat()
 
         for key in self.cmds.cmds:
             val = self.cmds.cmds[key]
@@ -194,7 +194,7 @@ class LMS:
             if isinstance(val, str) and len(val) > 35:
                 val = "... " + val[-35:]
 
-            self.target_hdr["HIERARCH "+key] = val
+            header["HIERARCH "+key] = val
 
 
 
@@ -306,7 +306,7 @@ class LMS:
         # transmit the source cube!
         #
         self.target_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
-        self.make_target_header()
+        self.add_cmds_to_header(self.target_hdr)
 
         if plot:
             plt.plot(self.wavelen, self.target_cube[:,111,100])
@@ -551,8 +551,21 @@ class LMS:
 
     #############################################################################
 
-    def compute_snr(self, integration_time, write_src_w_bg=None, write_background=None, plot=False):
-        '''Compute SNR of the simulated observation (step 4 of the big plan)'''
+    def compute_snr(self, exptime=0., ndit=0,
+                    write_src_w_bg=None, write_background=None, plot=False):
+        '''
+        Compute SNR of the simulated observation (step 4 of the big plan)
+        '''
+
+        if exptime > 0.:
+            self.cmds["OBS_EXPTIME"] = exptime
+        else:
+            exptime = self.cmds["OBS_EXPTIME"]
+
+        if ndit > 0:
+            self.cmds["OBS_NDIT"] = ndit
+        else:
+            ndit = self.cmds["OBS_NDIT"]
 
         mirr_list = self.cmds.mirrors_telescope
         mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
@@ -607,9 +620,11 @@ class LMS:
             plt.show()
 
         # Decide on the DIT to use, full well = 100e3, we fill to 80%
+        #dit = 80e3 * u.photon / np.max(ph_cube)
+        #print("Peak", np.max(ph_cube), ", using DIT", dit)
 
-        dit = 80e3 * u.photon / np.max(ph_cube)
-        print("Peak", np.max(ph_cube), ", using DIT", dit)
+        dit = exptime * u.s / ndit
+        print("Exptime", exptime, "s, NDIT =", ndit, ", using DIT", dit)
 
         ph_cube *= dit
         bg_cube *= dit
@@ -619,8 +634,8 @@ class LMS:
         targ_noise = np.sqrt(ph_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
         back_noise = np.sqrt(bg_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
 
-        ndit = np.round(integration_time / dit)
-        print("Total integration time", integration_time, "=> NDIT =", ndit)
+        #ndit = np.round(integration_time / dit)
+        #print("Total integration time", integration_time, "=> NDIT =", ndit)
 
         ph_cube *= ndit
         bg_cube *= ndit
@@ -637,6 +652,7 @@ class LMS:
 
         header = self.target_hdr.copy()
         header['BUNIT'] = "e/pixel"
+        self.add_cmds_to_header(header)
 
         if write_src_w_bg is not None:
             hdu = fits.PrimaryHDU(ph_cube.value, header=header)
