@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Wed Nov 21 22:06:58 2018
+Last change: Fri Nov 23 01:15:54 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -174,14 +174,16 @@ class LMS:
 
         self.det_pixscale = self.cmds["SIM_DETECTOR_PIX_SCALE"] * 1000.	 # in mas/pixel
 
-        print("Detector pixel scale ",self.det_pixscale," mas/pixel")
-        print("Filter = ",self.cmds["INST_FILTER_TC"])	# should be open filter
+        print("Detector pixel scale ", self.det_pixscale, " mas/pixel")
+        print("Filter = ", self.cmds["INST_FILTER_TC"])	# should be open filter
 
 
     #############################################################################
 
     def add_cmds_to_header(self, header):
-
+        '''
+        Add user commands to Fits header
+        '''
         header['DATE'] = datetime.now().isoformat()
 
         for key in self.cmds.cmds:
@@ -419,11 +421,11 @@ class LMS:
 
         for i in range(self.target_cube.shape[0]):
             #print(self.target_cube.shape[0]-i, end=' ', flush=True)
-            print(" ",i*100//(self.target_cube.shape[0]-1), end='% \r', flush=True)
+            print(" ", i*100//(self.target_cube.shape[0]-1), end='% \r', flush=True)
             self.target_cube[i,:,:] = ac.convolve_fft(self.target_cube[i,:,:], psf_scaled)
             # Note: convolve_fft sets values outside the image bounds to 0.
 
-        print("       ",end='\r')
+        print("       ", end='\r')
         if plot:
             plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with PSF")
@@ -460,12 +462,12 @@ class LMS:
         for i_x in range(self.target_cube.shape[2]):
             #print(self.target_cube.shape[2]-i_x, end=' ', flush=True)
             if i_x % 2 == 0:
-                print("\r ",i_x*100//(self.target_cube.shape[2]-1), end='% \r', flush=True)
+                print("\r ", i_x*100//(self.target_cube.shape[2]-1), end='% \r', flush=True)
             for i_y in range(self.target_cube.shape[1]):
                 self.target_cube[:,i_y,i_x] = ac.convolve_fft(self.target_cube[:,i_y,i_x],
                                                               gauss, boundary='wrap')
 
-        print("       ",end='\r')
+        print("       ", end='\r')
         if plot:
             plt.plot(self.target_cube[:,111,100])
             plt.title("Pixel [111,100] after convolution with LSF")
@@ -678,14 +680,14 @@ class LMS:
 
     #############################################################################
 
-    def simulate(self, conditions, psf_name, integration_time, plot=False):
+    def simulate(self, conditions, psf_name, exptime, ndit, plot=False):
         '''run a LMS simulation'''
 
         self.transmission_emission(conditions=conditions, plot=plot)
         self.convolve_psf(psf_name, plot=plot)
         self.convolve_lsf(plot=plot)
         self.scale_to_detector()
-        return self.compute_snr(integration_time, plot=plot)
+        return self.compute_snr(exptime=exptime, ndit=ndit, plot=plot)
 
 
 #############################################################################
