@@ -36,8 +36,8 @@ The other two notebooks are for test / development purposes and may serve illust
 ### L/M-band high resolution IFU (LMS)
 The notebook `SimMETIS_LMS.ipynb` demonstrates the use of the L and M band high-resolution integral field unit of METIS (LMS). Important notes:
 
- - the input (spatial/spectral) resolution must be at least twice as good as the output resolution.
- - the input data cube must of course be a valid FITS file and have a valid WCS. We provide an example cube in the `test_data` directory. The `BUNIT` format has to be "Jy/Pixel" (case-insensitive). Any other value for this keyword (or if this keyword is missing) is interpreted as "Jy/arcsec2". The spectral axis can be either "VELO" or "WAVE".
+ - the input (spatial/spectral) resolution should be at least twice as good as the output resolution.
+ - the input data cube must of course be a valid FITS file and have a valid WCS. We provide an example cube in the `test_data` directory. The `BUNIT` format has to be "Jy/Pixel" (case-insensitive). Any other value for this keyword (or if this keyword is missing) is interpreted as "Jy/arcsec2". The spectral axis can be either "FREQ", "VELO", or "WAVE".
 
 ## Point-Spread Functions
 One of the most critical aspects of imaging simulations is a realistic simulation of the telescope and instrument's point spread function (PSF). In SimMETIS 0.1 two different PSFs are included:
