@@ -1,3 +1,8 @@
+# 0.2 (December 2018)
+
+- added LMS module, including an example notebook, configuration file and test data
+- adapted documentation
+
 # 0.1 (October 2018)
 
 - first release of SimMETIS (based on SimCADO)
