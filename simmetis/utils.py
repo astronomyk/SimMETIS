@@ -26,7 +26,8 @@ import inspect
 try:
     import wget
 except ImportError:
-    print("Package wget is not available. simmetis.get_extras() will not work.")
+    print('''Optional package wget is not installed:
+       simmetis.get_extras() will not work.''')
 
 import numpy as np
 from astropy import units as u

@@ -121,8 +121,9 @@ from . import utils
 try:
     import poppy
 except:
-    warnings.warn("""Poppy is not installed. Functions beginning with "poppy_"
-                  will not work. See http://pythonhosted.org/poppy/""")
+    print("""Optional package poppy is not installed:
+       Functions beginning with "poppy_" will not work.
+       See http://pythonhosted.org/poppy/""")
 
 
 ## TODO
