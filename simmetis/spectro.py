@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Fri Nov 23 01:15:54 2018
+Last change: Mon Nov 26 07:45:10 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -22,6 +22,8 @@ import matplotlib.pyplot as plt
 
 import simmetis as sm
 import simmetis.spectral as sc
+
+import warnings
 
 #############################################################################
 
@@ -76,6 +78,8 @@ class LMS:
 
         naxis3, naxis2, naxis1 = self.src_cube.shape
         print(naxis1, "x", naxis2, "pixels,", naxis3, "spectral channels")
+
+        self.plotpix = np.asarray((naxis2//2, naxis1//2))
 
         # Parse the WCS keywords in primary HDU
         self.wcs = wcs.WCS(self.src_header)
@@ -209,8 +213,10 @@ class LMS:
         print()
         print("--------------------Transmission and Emission--------------------")
         if plot:
-            plt.plot(self.wavelen, self.src_cube[:,111,100])
-            plt.title("Pixel [111,100] in source cube")
+            plt.plot(self.wavelen, self.src_cube[:, self.plotpix[0], self.plotpix[1]])
+            plt.title("Pixel ["+str(self.plotpix[0])+","+str(self.plotpix[1])+"] in source cube")
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Flux [Jy/arcsec2]")
             plt.show()
 
         # calculate wavelens of detector, needed for emission
@@ -262,8 +268,10 @@ class LMS:
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
-            plt.plot(skylam[idx], skytran[idx], "+")
-            plt.plot(self.wavelen, transmission)
+            plt.plot(skylam[idx], skytran[idx], "+", label='Sky transmission')
+            plt.plot(self.wavelen, transmission, label='Sky tr. interpolated')
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Transmission")
             #plt.show()
 
         #############################################################################
@@ -297,8 +305,10 @@ class LMS:
                             kind='linear', bounds_error=False, fill_value=0.)
 
         if plot:
-            plt.plot(self.wavelen, tc_trans(self.wavelen))
+            plt.plot(self.wavelen, tc_trans(self.wavelen), label='Tel. transmission')
             plt.title("Sky & Telescope Transmission")
+            plt.xlabel("Wavelength [micron]")
+            plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
         transmission *= tc_trans(self.wavelen)
@@ -310,9 +320,15 @@ class LMS:
         self.target_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
         self.add_cmds_to_header(self.target_hdr)
 
+        # do not add skycal-file to self.cmds!
+        # the optical train will be confused if we try to re-run it.
+        self.target_hdr['SKYCAL_FILE'] = skyfile
+
         if plot:
-            plt.plot(self.wavelen, self.target_cube[:,111,100])
-            plt.title("Pixel [111,100] in transmitted cube")
+            plt.plot(self.wavelen, self.target_cube[:, self.plotpix[0], self.plotpix[1]])
+            plt.title("Pixel ["+str(self.plotpix[0])+","+str(self.plotpix[1])+"] in transmitted cube")
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Flux [Jy/arcsec2]")
             plt.show()
 
         #############################################################################
@@ -347,15 +363,19 @@ class LMS:
         ph_mirrors = ph_mirror(det_wavelen)
 
         if plot:
-            plt.plot(det_wavelen, ph_atmo_um, '+')
-            plt.plot(det_wavelen, ph_mirrors)
-            plt.plot(det_wavelen, ph_atmo_um+ph_mirrors)
+            plt.plot(det_wavelen, ph_atmo_um, '+', label='Atmosphere')
+            plt.plot(det_wavelen, ph_mirrors, label='Telescope')
+            plt.plot(det_wavelen, ph_atmo_um+ph_mirrors, label='total')
             plt.title("Sky & Mirror Emission")
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Background Flux [photons/s/um/pixel]")
+            plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
         self.background = ph_atmo_um+ph_mirrors 	# photons/s/um/pixel
 
         print("Final telescope temperature:", opttrain.cmds["SCOPE_TEMPERATURE"])
+
 
 
     #############################################################################
@@ -373,6 +393,7 @@ class LMS:
         psf_name = sm.utils.find_file(psf_name)
         print("Reading PSF", psf_name)
         psf_fits = fits.open(psf_name)
+        self.cmds['SCOPE_PSF_FILE'] = psf_name
 
         ext = psf_fits.index_of("PSF_3.80UM")
         print("PSF for 3.8um is extension", ext)
@@ -427,8 +448,11 @@ class LMS:
 
         print("       ", end='\r')
         if plot:
-            plt.plot(self.target_cube[:,111,100])
-            plt.title("Pixel [111,100] after convolution with PSF")
+            plt.plot(self.wavelen, self.target_cube[:, self.plotpix[0], self.plotpix[1]])
+            plt.title("Pixel ["+str(self.plotpix[0])+","+str(self.plotpix[1])+"] after convolution with PSF")
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Flux [Jy/arcsec2]")
+            plt.show()
 
 
     #############################################################################
@@ -469,8 +493,10 @@ class LMS:
 
         print("       ", end='\r')
         if plot:
-            plt.plot(self.target_cube[:,111,100])
-            plt.title("Pixel [111,100] after convolution with LSF")
+            plt.plot(self.wavelen, self.target_cube[:, self.plotpix[0], self.plotpix[1]])
+            plt.title("Pixel ["+str(self.plotpix[0])+","+str(self.plotpix[1])+"] after convolution with LSF")
+            plt.xlabel("Wavelength [micron]")
+            plt.ylabel("Flux [Jy/arcsec2]")
             plt.show()
 
 
@@ -525,6 +551,8 @@ class LMS:
 
         scale = self.src_pixscale.value / self.det_pixscale
         print("Scale factor:", scale)
+
+        self.plotpix = np.rint(self.plotpix*scale).astype(int)
 
         # we need to scale the coord of the last pixel, not the pixel behind the end!
         out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
@@ -601,9 +629,13 @@ class LMS:
         print("Background: ", np.max(backgrnd))
 
         if plot:
-            plt.plot(self.det_velocities * u.m/u.s, ph_cube[:,52,51])
-            plt.plot(self.det_velocities * u.m/u.s, backgrnd)
-            plt.title("Pixel [52,51] in photons/sec")
+            plt.plot(self.det_velocities * u.m/u.s,
+                     ph_cube[:, self.plotpix[0], self.plotpix[1]], label='Source')
+            plt.plot(self.det_velocities * u.m/u.s, backgrnd, label='Background')
+            plt.title("Source and background, pixel ["
+                      +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
+            plt.xlabel("Velocity [m/s]")
+            plt.ylabel("Flux [photons/sec]")
             #plt.show()
         #
         # NOTE: SimMETIS.OpticalTrain includes the QE of the detector
@@ -617,8 +649,13 @@ class LMS:
         ph_cube += bg_cube
 
         if plot:
-            plt.plot(self.det_velocities * u.m/u.s, ph_cube[:,52,51])
-            plt.title("Pixel [52,51] with background")
+            plt.plot(self.det_velocities * u.m/u.s,
+                     ph_cube[:, self.plotpix[0], self.plotpix[1]], label='Source+Bg')
+            plt.title("Source and background, pixel ["
+                      +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
+            plt.xlabel("Velocity [m/s]")
+            plt.ylabel("Flux [photons/sec]")
+            plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
         # Decide on the DIT to use, full well = 100e3, we fill to 80%
@@ -632,6 +669,13 @@ class LMS:
         bg_cube *= dit
 
         print("Peak in one DIT", np.max(ph_cube))
+        sat = len(np.where(ph_cube.value > 100e3)[0])
+        if sat > 0:
+            warn = "\n!!!WARNING: "+str(sat)+" PIXELS ARE ABOVE THE FULL-WELL CAPACITY OF 100000 PHOTONS!!!"
+            warnings.warn(warn)
+
+        if np.max(ph_cube.value) < 10e3:
+            warnings.warn("\nWARNING: brightest pixel has <10% of full well capacity. Your data will be noisy!")
 
         targ_noise = np.sqrt(ph_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
         back_noise = np.sqrt(bg_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
