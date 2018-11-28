@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Mon Nov 26 07:45:10 2018
+Last change: Wed Nov 28 11:38:08 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -18,6 +18,7 @@ from astropy import constants as const
 from astropy import wcs
 import astropy.convolution as ac
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 import simmetis as sm
@@ -37,12 +38,20 @@ def _scale_image(img, scale):
     in_y = np.arange(naxis2)
     #print(len(in_x))
 
-    # TODO better: scale from the center of the img
-
-    # we need to scale the coord of the last pixel, not the pixel behind the end!
-    out_x = np.arange(round((naxis1-1)*scale)+1) / scale
-    out_y = np.arange(round((naxis2-1)*scale)+1) / scale
+    # this scales from pixel 0,0
+    #out_x = np.arange(round((naxis1-1)*scale)+1) / scale
+    #out_y = np.arange(round((naxis2-1)*scale)+1) / scale
     #print(len(out_x))
+
+    # scale from the center of the image
+    half1 = naxis1//2
+    half2 = naxis2//2
+
+    # scale the coord of the last pixel, not the pixel behind the end!
+    out_x = np.arange(half1 - round(half1*scale)/scale,
+                      half1 + round((half1-1)*scale)/scale + 1, 1./scale)
+    out_y = np.arange(half2 - round(half2*scale)/scale,
+                      half2 + round((half2-1)*scale)/scale + 1, 1./scale)
 
     interp = RectBivariateSpline(in_x, in_y, img, kx=1, ky=1)	# bilinear interpol
     scaled_img = interp(out_x, out_y, grid=True)
@@ -65,6 +74,9 @@ class LMS:
 
     def __init__(self, filename, config, lambda0=3.8):
         '''Read datacube and WCS'''
+
+        self.wide_figsize = matplotlib.rcParams['figure.figsize'].copy()
+        self.wide_figsize[0] = self.wide_figsize[1]*16./9.
 
 	# separate our output from the bullshit printed by import
         print('============================================')
@@ -268,6 +280,8 @@ class LMS:
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(left=0.1, right=0.75)
             plt.plot(skylam[idx], skytran[idx], "+", label='Sky transmission')
             plt.plot(self.wavelen, transmission, label='Sky tr. interpolated')
             plt.xlabel("Wavelength [micron]")
@@ -363,6 +377,8 @@ class LMS:
         ph_mirrors = ph_mirror(det_wavelen)
 
         if plot:
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(right=0.8)
             plt.plot(det_wavelen, ph_atmo_um, '+', label='Atmosphere')
             plt.plot(det_wavelen, ph_mirrors, label='Telescope')
             plt.plot(det_wavelen, ph_atmo_um+ph_mirrors, label='total')
@@ -554,9 +570,19 @@ class LMS:
 
         self.plotpix = np.rint(self.plotpix*scale).astype(int)
 
-        # we need to scale the coord of the last pixel, not the pixel behind the end!
-        out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
-        out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
+        ## we need to scale the coord of the last pixel, not the pixel behind the end!
+        #out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
+        #out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
+
+        # scale from the center of the image
+        half1 = naxis1//2
+        half2 = naxis2//2
+
+        # scale the coord of the last pixel, not the pixel behind the end!
+        out_x = np.arange(half1 - round(half1*scale[1])/scale[1],
+                          half1 + round((half1-1)*scale[1])/scale[1] + 1, 1./scale[1])
+        out_y = np.arange(half2 - round(half2*scale[0])/scale[0],
+                          half2 + round((half2-1)*scale[0])/scale[0] + 1, 1./scale[0])
 
         scaled_cube = np.empty((naxis3, len(out_y), len(out_x)), self.target_cube[0,0,0].dtype)
 
@@ -606,21 +632,23 @@ class LMS:
 	# per arcsec^2, but astropy cannot convert that
         ph_cube = ph_cube.to(u.photon / (u.s * u.um),
                              equivalencies=u.spectral_density(self.restcoo)) / (u.arcsec**2)
+        # technically, we convert to photo-electrons/s/um/arcsec2,
+        # because the QE of the detector has been applied in the simmetis.OpticalTrain
 
         print("Source peak:", np.max(ph_cube))
         print(ph_cube.shape)
 
-        backgrnd = self.background * u.photon / (u.s*u.um)
+        backgrnd = self.background * u.electron / (u.s*u.um)
         print("Background max:", np.max(backgrnd))
 
         # dLambda = lambda * dv/c
-        d_lambda = (4.8 * u.um * (1.5 *u.km/u.s) / const.c).to(u.um)	# in micron
+        d_lambda = (np.mean(self.wavelen)*u.um * (1.5 *u.km/u.s) / const.c).to(u.um)	# in micron
         print("d_lambda", d_lambda)
 
         pix_area = (self.det_pixscale/1000. * u.arcsec)**2
         print("Pixel area", pix_area)
 
-        ph_cube *= d_lambda*pix_area
+        ph_cube *= d_lambda*pix_area * u.electron/u.photon	# was electrons all the time
         backgrnd *= d_lambda	# per pixel
 
         print("peak pos:", np.unravel_index(np.argmax(ph_cube), ph_cube.shape))
@@ -629,13 +657,15 @@ class LMS:
         print("Background: ", np.max(backgrnd))
 
         if plot:
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(left=0.1, right=0.75)
             plt.plot(self.det_velocities * u.m/u.s,
                      ph_cube[:, self.plotpix[0], self.plotpix[1]], label='Source')
-            plt.plot(self.det_velocities * u.m/u.s, backgrnd, label='Background')
+            plt.plot(self.det_velocities * u.m/u.s, backgrnd*100., label='Background*100')
             plt.title("Source and background, pixel ["
                       +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
             plt.xlabel("Velocity [m/s]")
-            plt.ylabel("Flux [photons/sec]")
+            plt.ylabel("Flux [e-/sec]")
             #plt.show()
         #
         # NOTE: SimMETIS.OpticalTrain includes the QE of the detector
@@ -654,7 +684,7 @@ class LMS:
             plt.title("Source and background, pixel ["
                       +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
             plt.xlabel("Velocity [m/s]")
-            plt.ylabel("Flux [photons/sec]")
+            plt.ylabel("Flux [e-/sec]")
             plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
@@ -677,8 +707,8 @@ class LMS:
         if np.max(ph_cube.value) < 10e3:
             warnings.warn("\nWARNING: brightest pixel has <10% of full well capacity. Your data will be noisy!")
 
-        targ_noise = np.sqrt(ph_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
-        back_noise = np.sqrt(bg_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
+        targ_noise = np.sqrt(ph_cube*u.electron + (70 * u.electron)**2)	# RON = 70e/pix/read
+        back_noise = np.sqrt(bg_cube*u.electron + (70 * u.electron)**2)	# RON = 70e/pix/read
 
         #ndit = np.round(integration_time / dit)
         #print("Total integration time", integration_time, "=> NDIT =", ndit)
@@ -701,10 +731,12 @@ class LMS:
         self.add_cmds_to_header(header)
 
         if write_src_w_bg is not None:
+            print("Writing source+background to", write_src_w_bg)
             hdu = fits.PrimaryHDU(ph_cube.value, header=header)
             hdu.writeto(write_src_w_bg, overwrite=True)
 
         if write_background is not None:
+            print("Writing background to", write_background)
             hdu = fits.PrimaryHDU(bg_cube.value, header=header)
             hdu.writeto(write_background, overwrite=True)
 
