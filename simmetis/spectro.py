@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Sat Dec  1 22:30:17 2018
+Last change: Wed Dec  5 17:10:21 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -187,6 +187,7 @@ class LMS:
         self.target_hdr['BUNIT'] = 'Jy/arcsec2'
         self.background = None
 
+        self.transmission = 1.
         self.emission = None	# will be computed later
 
         # initialize SimCADO to set searchpaths
@@ -282,7 +283,7 @@ class LMS:
         #
         # interpolate transmission/emission onto source-grid
         #
-        transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
+        self.transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
 
         sky_emission = np.interp(det_wavelen, skylam, skyemis) * (self.det_pixscale/1000.)**2
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
@@ -291,7 +292,7 @@ class LMS:
             plt.figure(num=1, figsize=self.wide_figsize)
             plt.subplots_adjust(left=0.1, right=0.75)
             plt.plot(skylam[idx], skytran[idx], "+", label='Sky transmission')
-            plt.plot(self.wavelen, transmission, label='Sky tr. interpolated')
+            plt.plot(self.wavelen, self.transmission, label='Sky tr. interpolated')
             plt.xlabel("Wavelength [micron]")
             plt.ylabel("Transmission")
             #plt.show()
@@ -335,13 +336,13 @@ class LMS:
             plt.show()
 
         # combine transmission of atmosphere, telescope, and LMS (the Roy factor)
-        transmission *= tc_trans(self.wavelen) * 0.712599
+        self.transmission *= tc_trans(self.wavelen) * 0.712599
 
         #############################################################################
         #
         # transmit the source cube!
         #
-        self.target_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
+        self.target_cube = self.src_cube * self.transmission[:, np.newaxis, np.newaxis]
         self.add_cmds_to_header(self.target_hdr)
 
         # do not add skycal-file to self.cmds!
@@ -762,10 +763,11 @@ class LMS:
 
         header = self.target_hdr.copy()
         header['BUNIT'] = "e/pixel"
-        # TODO: make sure these keywords are before the HIERARCH-keywords
-        header['EXPTIME'] = (exptime, "[s] Total exposure time = DIT*NDIT")
-        header['DIT']  = (dit.value, "[s] Detector integration time = EXPTIME/NDIT")
-        header['NDIT'] = (ndit, "Number of integrations = EXPTIME/DIT")
+
+        key = 'HIERARCH '+self.cmds.cmds.popitem(last=False)[0]
+        header.set('EXPTIME', exptime, "[s] Total exposure time = DIT*NDIT", before=key)
+        header.set('DIT', dit.value, "[s] Detector integration time = EXPTIME/NDIT", before=key)
+        header.set('NDIT', ndit, "Number of integrations = EXPTIME/DIT", before=key)
         self.add_cmds_to_header(header)
 
         if write_src_w_bg is not None:
@@ -780,6 +782,45 @@ class LMS:
 
         ph_cube -= bg_cube
         hdu = fits.PrimaryHDU(ph_cube.value, header=header)
+        return hdu
+
+
+    #############################################################################
+
+    def calibrate_flux(self, hdu):
+        '''
+        do flux calibration by undoing what the simulator did so far (as much as possible)
+        input is the result of compute_snr()
+        '''
+        data = hdu.data * u.electron	# per dit, pixel, spectral channel, and M1-area
+
+        mirr_list = self.cmds.mirrors_telescope
+        mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
+                                       mirr_list["Inner"]**2) * u.m**2
+
+        data = data / (hdu.header['EXPTIME'] * u.s
+                       * (np.mean(self.wavelen)*u.um * (1.5 *u.km/u.s) / const.c).to(u.um)
+                       * mirr_area)
+        # e-/s/um/m2
+
+        # wavelengths of data cube
+        det_wavelen = (self.det_velocities
+                       * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
+
+        # interpolate transmission onto wavelength-grid of detector:
+        trans = np.interp(det_wavelen, self.wavelen, self.transmission)
+
+        data /= trans[:, np.newaxis, np.newaxis]
+
+        data = (data * u.photon/u.electron).to(u.Jy,
+                                               equivalencies=u.spectral_density(self.restcoo))
+
+        data = data / (self.det_pixscale/1000. * u.arcsec)**2
+        # Jy/arcsec2
+
+        hdu.data = data
+        hdu.header['BUNIT'] = ('JY/ARCSEC2', 'Jansky per arcsec**2')
+
         return hdu
 
 
