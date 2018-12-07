@@ -818,7 +818,7 @@ class LMS:
         data = data / (self.det_pixscale/1000. * u.arcsec)**2
         # Jy/arcsec2
 
-        hdu.data = data
+        hdu.data = data.value
         hdu.header['BUNIT'] = ('JY/ARCSEC2', 'Jansky per arcsec**2')
 
         return hdu
