@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Wed Dec  5 17:10:21 2018
+Last change: Thu Dec 20 12:31:25 2018
 
 Python-script to simulate LMS of METIS
 """
@@ -137,6 +137,7 @@ class LMS:
 
         if self.verbose:
             print("CTYPES:", self.wcs.wcs.ctype)
+            print("CUNITS:", self.wcs.wcs.cunit)
 
         if self.wcs.wcs.ctype[2] == 'VELO':
             #print("Velocities:",world_coo)
@@ -161,6 +162,7 @@ class LMS:
             print("Wavelengths:", wavelen[0:3], "...", wavelen[-1])
             print("restfrq:", self.wcs.wcs.restfrq)
             print("restwav:", self.wcs.wcs.restwav)
+            print("restcoo:", self.restcoo)
             #print("Rest wavelen:", restcoo.to(u.um, equivalencies=u.spectral()))
 
         in_velos = wavelen.to(u.m/u.s, equivalencies=u.doppler_optical(restcoo))
@@ -192,7 +194,7 @@ class LMS:
 
         # initialize SimCADO to set searchpaths
         #
-        print("Reading config ", config)
+        print("Reading config", config)
         self.cmds = sm.UserCommands(config)
 
         self.det_pixscale = self.cmds["SIM_DETECTOR_PIX_SCALE"] * 1000.	 # in mas/pixel
@@ -200,6 +202,10 @@ class LMS:
         if self.verbose:
             print("Detector pixel scale ", self.det_pixscale, " mas/pixel")
             print("Filter = ", self.cmds["INST_FILTER_TC"])	# should be open filter
+
+        if np.max(self.src_pixscale.value) > self.det_pixscale:
+            print("Warning: max. pixel scale of input cube is larger than detector pixel scale!")
+            print(np.max(self.src_pixscale),"/pixel >",self.det_pixscale," mas/pixel")
 
 
     #############################################################################
@@ -279,6 +285,8 @@ class LMS:
         idx = (np.where((skylam >= np.min(self.wavelen)) &
                         (skylam <= np.max(self.wavelen))))[0]
         if self.verbose:
+            print("wavelen:", np.min(self.wavelen), "...", np.max(self.wavelen))
+            print("skylam: ", np.min(skylam), "...", np.max(skylam))
             print("Index skytran to src-wave:", idx[0], "...", idx[-1])
         #
         # interpolate transmission/emission onto source-grid
@@ -818,10 +826,9 @@ class LMS:
         data = data / (self.det_pixscale/1000. * u.arcsec)**2
         # Jy/arcsec2
 
-        hdu.data = data.value
-        hdu.header['BUNIT'] = ('JY/ARCSEC2', 'Jansky per arcsec**2')
-
-        return hdu
+        calhdu = fits.PrimaryHDU(data.value, header=hdu.header)
+        calhdu.header['BUNIT'] = ('Jy/arcsec2', 'Jansky per arcsec**2')
+        return calhdu
 
 
     #############################################################################
