@@ -4,7 +4,9 @@
 If you use SimMETIS, [we'd love to hear from you](simmetis@strw.leidenuniv.nl).
 
 ## Dependencies
-In order to run SimMETIS, you need to have installations of `numpy`, `scipy`, `astropy` and `matplotlib` packages, preferably in their latest versions. For special purposes, also `poppy` (Physical Optics Propagation in PYthon) in version 0.7.0 or higher as well as `wget` are required.
+In order to run SimMETIS, you need to have a working installation of Python 3 including the packages `numpy`, `scipy`, `astropy` and `matplotlib`, preferably in their latest versions. For special purposes, also `poppy` (Physical Optics Propagation in PYthon) in version 0.7.0 or higher as well as `wget` are required.
+
+On the Mac, we recommend to install Python 3 using the package manager [Homebrew](https://brew.sh).
 
 We further recommend using the interactive Python shell `iPython` as well as running your scripts in notebook mode using `Jupyter`.
 
