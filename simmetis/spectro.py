@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Thu Dec 20 12:31:25 2018
+Last change: Fri Feb  1 13:18:55 2019
 
 Python-script to simulate LMS of METIS
 """
@@ -355,7 +355,10 @@ class LMS:
 
         # do not add skycal-file to self.cmds!
         # the optical train will be confused if we try to re-run it.
-        self.target_hdr['SKYCAL_FILE'] = skyfile
+        if len(skyfile) > 50:
+            self.target_hdr['SKYCAL_FILE'] = "... " + skyfile[-50:]
+        else:
+            self.target_hdr['SKYCAL_FILE'] = skyfile
 
         if plot:
             plt.plot(self.wavelen, self.target_cube[:, self.plotpix[0], self.plotpix[1]])
