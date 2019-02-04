@@ -9,7 +9,7 @@ from distutils.core import setup
 # Version number
 MAJOR = 0
 MINOR = 2
-ATTR = 'b1'
+ATTR = ''
 VERSION = '%d.%d%s' % (MAJOR, MINOR, ATTR)
 
 
@@ -32,9 +32,10 @@ def setup_package():
     setup(name = 'SimMETIS',
           version = VERSION,
           description = "METIS Instrument simulator",
-          author = "Kieran Leschinski, Oliver Czoske, Leonard Burtscher, Roy van Boekel",
+          author = "Kieran Leschinski, Oliver Czoske, Rainer Köhler, Leonard Burtscher, Roy van Boekel",
           author_email = """kieran.leschinski@unive.ac.at,
                             oliver.czoske@univie.ac.at,
+                            Rainer.Koehler@univie.ac.at,
                             burtscher@strw.leidenuniv.nl
                             boekel@mpia.de""",
           url = "http://metis.strw.leidenuniv.nl/wiki/doku.php?id=sim:simulator",
