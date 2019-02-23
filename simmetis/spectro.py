@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Fri Feb  1 13:18:55 2019
+Last change: Sat Feb 23 18:30:02 2019
 
 Python-script to simulate LMS of METIS
 """
@@ -97,6 +97,8 @@ class LMS:
         self.plotpix = np.asarray((naxis2//2, naxis1//2))
 
         # Parse the WCS keywords in primary HDU
+        del self.src_header['VELREF']	# no AIPS stuff, please
+        print(self.src_header)
         self.wcs = wcs.WCS(self.src_header)
 
         pixscale1, pixscale2 = wcs.utils.proj_plane_pixel_scales(self.wcs)[0:2]
@@ -153,6 +155,7 @@ class LMS:
             wavelen = world_coo.to(u.um, equivalencies=u.spectral())
             restcoo = self.wcs.wcs.restfrq * self.wcs.wcs.cunit[2]
         else:
+            print("spectral axis is '",self.wcs.wcs.ctype[2],"'")
             raise NotImplementedError('spectral axis must have type VELO, WAVE, or FREQ')
 
         self.wavelen = wavelen.value	# should we store it with units?
@@ -204,8 +207,10 @@ class LMS:
             print("Filter = ", self.cmds["INST_FILTER_TC"])	# should be open filter
 
         if np.max(self.src_pixscale.value) > self.det_pixscale:
-            print("Warning: max. pixel scale of input cube is larger than detector pixel scale!")
-            print(np.max(self.src_pixscale),"/pixel >",self.det_pixscale," mas/pixel")
+            print("+------------------------------------------------------------------------------+")
+            print("| WARNING: MAX. PIXEL SCALE OF INPUT CUBE IS LARGER THAN DETECTOR PIXEL SCALE! |")
+            print("|",np.max(self.src_pixscale),"/pixel >",self.det_pixscale," mas/pixel")
+            print("+------------------------------------------------------------------------------+")
 
 
     #############################################################################
@@ -467,16 +472,19 @@ class LMS:
 
         psf_center = np.asarray(psf_scaled.shape) // 2
         img_shape = self.target_cube.shape[1:3]
-        if self.verbose:
-            print("Cropping PSF to [",
-                  psf_center[0]-img_shape[0], ":", psf_center[0]+img_shape[0]+1, ",",
-                  psf_center[1]-img_shape[1], ":", psf_center[1]+img_shape[1]+1, "]")
+        if psf_center[0] > img_shape[0] and psf_center[1] > img_shape[1]:
+            if self.verbose:
+                print("Cropping PSF to [",
+                      psf_center[0]-img_shape[0], ":", psf_center[0]+img_shape[0]+1, ",",
+                      psf_center[1]-img_shape[1], ":", psf_center[1]+img_shape[1]+1, "]")
 
-        psf_scaled = psf_scaled[(psf_center[0]-img_shape[0]):(psf_center[0]+img_shape[0]+1),
-                                (psf_center[1]-img_shape[1]):(psf_center[1]+img_shape[1]+1)]
+            psf_scaled = psf_scaled[(psf_center[0]-img_shape[0]):(psf_center[0]+img_shape[0]+1),
+                                    (psf_center[1]-img_shape[1]):(psf_center[1]+img_shape[1]+1)]
+        else:
+            print("Image is too large, not cropping PSF")
 
         if write_psf is not None:
-            print("Writing scaled PSF to ", write_psf)
+            print("Writing scaled PSF to", write_psf)
             psf_hdr['EXTNAME'] = None
             hdu = fits.PrimaryHDU(psf_scaled)
             hdu.header['WAVELENG'] = np.mean(self.wavelen)
