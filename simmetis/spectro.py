@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Sat Feb 23 18:30:02 2019
+Last change: Mon Feb 25 23:26:55 2019
 
 Python-script to simulate LMS of METIS
 """
@@ -74,7 +74,7 @@ class LMS:
     lambda0: wavelength at zero-point of 3.dimension
     """
 
-    def __init__(self, filename, config, lambda0=3.8, verbose=False):
+    def __init__(self, filename, config, lambda0=0., verbose=False):
         '''Read datacube and WCS'''
 
         self.wide_figsize = matplotlib.rcParams['figure.figsize'].copy()
@@ -97,8 +97,7 @@ class LMS:
         self.plotpix = np.asarray((naxis2//2, naxis1//2))
 
         # Parse the WCS keywords in primary HDU
-        del self.src_header['VELREF']	# no AIPS stuff, please
-        print(self.src_header)
+        #del self.src_header['VELREF']	# no AIPS stuff, please
         self.wcs = wcs.WCS(self.src_header)
 
         pixscale1, pixscale2 = wcs.utils.proj_plane_pixel_scales(self.wcs)[0:2]
@@ -141,10 +140,23 @@ class LMS:
             print("CTYPES:", self.wcs.wcs.ctype)
             print("CUNITS:", self.wcs.wcs.cunit)
 
+        if self.wcs.wcs.ctype[2] == 'VRAD' or self.wcs.wcs.ctype[2] == 'VOPT':
+            print("WARNING: Your Fits header specifies the spectral axis as",self.wcs.wcs.ctype[2])
+            print("         We treat it as apparent radial velocity (VELO)")
+            self.wcs.wcs.ctype[2] = 'VELO'
+
         if self.wcs.wcs.ctype[2] == 'VELO':
             #print("Velocities:",world_coo)
             # this should be in the header, shouldn't it?
-            restcoo = lambda0 * u.um			   # unit of lambda0 must be micron
+            if lambda0 > 0.:
+                restcoo = lambda0 * u.um	# unit of lambda0 must be micron
+            elif self.wcs.wcs.restwav > 0:
+                restcoo = (self.wcs.wcs.restwav * u.m).to(u.um)
+            elif self.wcs.wcs.restfrq >0:
+                restcoo = (self.wcs.wcs.restfrq * u.Hz).to(u.um, equivalencies=u.spectral())
+            else:
+                raise RunTimeError("Cannot determine rest wavelength of velocity scale.")
+
             wavelen = restcoo * (1. + world_coo / const.c)
             #print("Wavelengths:",wavelen)
         elif self.wcs.wcs.ctype[2] == 'WAVE':
@@ -441,7 +453,18 @@ class LMS:
         psf_fits = fits.open(psf_name)
         self.cmds['SCOPE_PSF_FILE'] = psf_name
 
-        ext = psf_fits.index_of("PSF_3.80UM")
+        try:
+            ext = psf_fits.index_of("PSF_3.80UM")
+        except KeyError:
+            print("")
+            print("+==============================================================================+")
+            print("|EXTENSION PSF_3.80UM NOT FOUND!                                               |")
+            print("|It appears you try to use a FITS-file that does not contain a proper METIS-PSF|")
+            print("|You may use any of the PSF-files found on the website:                        |")
+            print("|              http://www.mpia.de/homes/feldt/METIS_AO/table.html              |")
+            print("+==============================================================================+")
+            raise
+
         if self.verbose:
             print("PSF for 3.8um is extension", ext)
         psf_img = psf_fits[ext].data
