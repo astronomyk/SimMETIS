@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Mon Feb 25 23:26:55 2019
+Last change: Thu Mar  7 13:07:59 2019
 
 Python-script to simulate LMS of METIS
 """
@@ -661,6 +661,17 @@ class LMS:
             print("ScaleToDetector: new shape =", scaled_cube.shape)
 
         self.target_cube = scaled_cube
+
+        # new_CRPIX = old_CRPIX * new_size/old_size
+        #
+        # old_pixscale = FoV/old_size
+        # new_pixscale = FoV/new_size
+        # scale = old_pixscale / new_pixscale = FoV/old_size * new_size/FoV = new_size/old_size
+        #
+        # new_CRPIX = old_CRPIX * scale
+        #
+        self.wcs.wcs.crpix[0] = round(self.wcs.wcs.crpix[0] * scale[0])	# or [1]?
+        self.wcs.wcs.crpix[1] = round(self.wcs.wcs.crpix[1] * scale[1])
 
         self.wcs.wcs.cdelt[0] = -self.det_pixscale/3600./1000.	# convert mas/pix to deg/pix
         self.wcs.wcs.cdelt[1] =  self.det_pixscale/3600./1000.
