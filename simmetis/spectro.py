@@ -1,7 +1,7 @@
 """
 spectro.py
 Created:     Sat Oct 27 14:52:39 2018 by Koehler@Quorra
-Last change: Mon Nov 26 07:45:10 2018
+Last change: Thu Mar  7 13:07:59 2019
 
 Python-script to simulate LMS of METIS
 """
@@ -18,6 +18,7 @@ from astropy import constants as const
 from astropy import wcs
 import astropy.convolution as ac
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 import simmetis as sm
@@ -27,27 +28,37 @@ import warnings
 
 #############################################################################
 
-def _scale_image(img, scale):
+def _scale_image(img, scale, verbose=False):
     '''interpolate image to new shape'''
 
     naxis2, naxis1 = img.shape
-    print("scale_image: old shape =", img.shape)
+    if verbose:
+        print("scale_image: old shape =", img.shape)
 
     in_x = np.arange(naxis1)
     in_y = np.arange(naxis2)
     #print(len(in_x))
 
-    # TODO better: scale from the center of the img
-
-    # we need to scale the coord of the last pixel, not the pixel behind the end!
-    out_x = np.arange(round((naxis1-1)*scale)+1) / scale
-    out_y = np.arange(round((naxis2-1)*scale)+1) / scale
+    # this scales from pixel 0,0
+    #out_x = np.arange(round((naxis1-1)*scale)+1) / scale
+    #out_y = np.arange(round((naxis2-1)*scale)+1) / scale
     #print(len(out_x))
+
+    # scale from the center of the image
+    half1 = naxis1//2
+    half2 = naxis2//2
+
+    # scale the coord of the last pixel, not the pixel behind the end!
+    out_x = np.arange(half1 - round(half1*scale)/scale,
+                      half1 + round((half1-1)*scale)/scale + 1, 1./scale)
+    out_y = np.arange(half2 - round(half2*scale)/scale,
+                      half2 + round((half2-1)*scale)/scale + 1, 1./scale)
 
     interp = RectBivariateSpline(in_x, in_y, img, kx=1, ky=1)	# bilinear interpol
     scaled_img = interp(out_x, out_y, grid=True)
 
-    print("scale_image: new shape =", scaled_img.shape)
+    if verbose:
+        print("scale_image: new shape =", scaled_img.shape)
 
     return scaled_img
 
@@ -63,8 +74,12 @@ class LMS:
     lambda0: wavelength at zero-point of 3.dimension
     """
 
-    def __init__(self, filename, config, lambda0=3.8):
+    def __init__(self, filename, config, lambda0=0., verbose=False):
         '''Read datacube and WCS'''
+
+        self.wide_figsize = matplotlib.rcParams['figure.figsize'].copy()
+        self.wide_figsize[0] = self.wide_figsize[1]*16./9.
+        self.verbose = verbose
 
 	# separate our output from the bullshit printed by import
         print('============================================')
@@ -82,6 +97,7 @@ class LMS:
         self.plotpix = np.asarray((naxis2//2, naxis1//2))
 
         # Parse the WCS keywords in primary HDU
+        #del self.src_header['VELREF']	# no AIPS stuff, please
         self.wcs = wcs.WCS(self.src_header)
 
         pixscale1, pixscale2 = wcs.utils.proj_plane_pixel_scales(self.wcs)[0:2]
@@ -90,7 +106,8 @@ class LMS:
         #print("image pixscale from WCS:", pixscale1, pixscale2, "/pixel")
 
         self.src_pixscale = np.asarray((pixscale1.value, pixscale2.value))*u.mas
-        print("image pixscale:", self.src_pixscale, "per pixel")
+        if self.verbose:
+            print("image pixscale:", self.src_pixscale, "per pixel")
 
         # Check flux units of data cube
 
@@ -102,7 +119,8 @@ class LMS:
                 #print(np.max(self.src_cube[:,111,100]))
                 pixarea = (wcs.utils.proj_plane_pixel_area(self.wcs) *
                            self.wcs.wcs.cunit[0]*self.wcs.wcs.cunit[1]).to(u.arcsec*u.arcsec)
-                print("Pixel area is", pixarea)
+                if self.verbose:
+                    print("Pixel area is", pixarea)
                 self.src_cube /= pixarea.value
                 #plt.semilogy(self.src_cube[:,111,100])
                 #plt.show()
@@ -118,12 +136,27 @@ class LMS:
         # Second argument is "origin" -- in this case 0-based coordinates
         world_coo = self.wcs.wcs_pix2world(crd, 0)[:,2] * self.wcs.wcs.cunit[2]
 
-        print("CTYPES:", self.wcs.wcs.ctype)
+        if self.verbose:
+            print("CTYPES:", self.wcs.wcs.ctype)
+            print("CUNITS:", self.wcs.wcs.cunit)
+
+        if self.wcs.wcs.ctype[2] == 'VRAD' or self.wcs.wcs.ctype[2] == 'VOPT':
+            print("WARNING: Your Fits header specifies the spectral axis as",self.wcs.wcs.ctype[2])
+            print("         We treat it as apparent radial velocity (VELO)")
+            self.wcs.wcs.ctype[2] = 'VELO'
 
         if self.wcs.wcs.ctype[2] == 'VELO':
             #print("Velocities:",world_coo)
             # this should be in the header, shouldn't it?
-            restcoo = lambda0 * u.um			   # unit of lambda0 must be micron
+            if lambda0 > 0.:
+                restcoo = lambda0 * u.um	# unit of lambda0 must be micron
+            elif self.wcs.wcs.restwav > 0:
+                restcoo = (self.wcs.wcs.restwav * u.m).to(u.um)
+            elif self.wcs.wcs.restfrq >0:
+                restcoo = (self.wcs.wcs.restfrq * u.Hz).to(u.um, equivalencies=u.spectral())
+            else:
+                raise RunTimeError("Cannot determine rest wavelength of velocity scale.")
+
             wavelen = restcoo * (1. + world_coo / const.c)
             #print("Wavelengths:",wavelen)
         elif self.wcs.wcs.ctype[2] == 'WAVE':
@@ -134,33 +167,35 @@ class LMS:
             wavelen = world_coo.to(u.um, equivalencies=u.spectral())
             restcoo = self.wcs.wcs.restfrq * self.wcs.wcs.cunit[2]
         else:
+            print("spectral axis is '",self.wcs.wcs.ctype[2],"'")
             raise NotImplementedError('spectral axis must have type VELO, WAVE, or FREQ')
 
-        print("Wavelengths:", wavelen[0:3], "...", wavelen[-1])
         self.wavelen = wavelen.value	# should we store it with units?
         self.restcoo = restcoo		# RESTFRQ or RESTWAV with units
 
-        print("restfrq:", self.wcs.wcs.restfrq)
-        print("restwav:", self.wcs.wcs.restwav)
-        #print("Rest wavelen:", restcoo.to(u.um, equivalencies=u.spectral()))
+        if self.verbose:
+            print("Wavelengths:", wavelen[0:3], "...", wavelen[-1])
+            print("restfrq:", self.wcs.wcs.restfrq)
+            print("restwav:", self.wcs.wcs.restwav)
+            print("restcoo:", self.restcoo)
+            #print("Rest wavelen:", restcoo.to(u.um, equivalencies=u.spectral()))
 
         in_velos = wavelen.to(u.m/u.s, equivalencies=u.doppler_optical(restcoo))
-        print("Source velocities (WCS):", in_velos[0], "...", in_velos[-1])
-        #print(in_velos)
-
         step = 1.5 * u.km/u.s
-
         new3 = int((in_velos[-1] - in_velos[0]) / step)+1
-        print("new naxis3:", new3)
-
         meanv = (in_velos[0] + in_velos[-1]) / 2.
-        #print("middle v:", meanv)
 
         self.det_velocities = np.arange((meanv-step*(new3-1)/2.).to(u.m/u.s).value,
                                         (meanv+step*((new3-1)/2.+1)).to(u.m/u.s).value,
                                         step.to(u.m/u.s).value)
-        print("Detector velocities:", self.det_velocities.shape,
-              self.det_velocities[0], "...", self.det_velocities[-1])
+
+        if self.verbose:
+            print("Source velocities (WCS):", in_velos[0], "...", in_velos[-1])
+            #print(in_velos)
+            print("new naxis3:", new3)
+            #print("middle v:", meanv)
+            print("Detector velocities:", self.det_velocities.shape,
+                  self.det_velocities[0], "...", self.det_velocities[-1])
 
         # initialize the target cube, in case someone does not call transmission_emission()
 
@@ -169,17 +204,25 @@ class LMS:
         self.target_hdr['BUNIT'] = 'Jy/arcsec2'
         self.background = None
 
+        self.transmission = 1.
         self.emission = None	# will be computed later
 
         # initialize SimCADO to set searchpaths
         #
-        print("Reading config ", config)
+        print("Reading config", config)
         self.cmds = sm.UserCommands(config)
 
         self.det_pixscale = self.cmds["SIM_DETECTOR_PIX_SCALE"] * 1000.	 # in mas/pixel
 
-        print("Detector pixel scale ", self.det_pixscale, " mas/pixel")
-        print("Filter = ", self.cmds["INST_FILTER_TC"])	# should be open filter
+        if self.verbose:
+            print("Detector pixel scale ", self.det_pixscale, " mas/pixel")
+            print("Filter = ", self.cmds["INST_FILTER_TC"])	# should be open filter
+
+        if np.max(self.src_pixscale.value) > self.det_pixscale:
+            print("+------------------------------------------------------------------------------+")
+            print("| WARNING: MAX. PIXEL SCALE OF INPUT CUBE IS LARGER THAN DETECTOR PIXEL SCALE! |")
+            print("|",np.max(self.src_pixscale),"/pixel >",self.det_pixscale," mas/pixel")
+            print("+------------------------------------------------------------------------------+")
 
 
     #############################################################################
@@ -258,18 +301,23 @@ class LMS:
 
         idx = (np.where((skylam >= np.min(self.wavelen)) &
                         (skylam <= np.max(self.wavelen))))[0]
-        print("Index skytran to src-wave:", idx[0], "...", idx[-1])
+        if self.verbose:
+            print("wavelen:", np.min(self.wavelen), "...", np.max(self.wavelen))
+            print("skylam: ", np.min(skylam), "...", np.max(skylam))
+            print("Index skytran to src-wave:", idx[0], "...", idx[-1])
         #
         # interpolate transmission/emission onto source-grid
         #
-        transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
+        self.transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
 
         sky_emission = np.interp(det_wavelen, skylam, skyemis) * (self.det_pixscale/1000.)**2
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(left=0.1, right=0.75)
             plt.plot(skylam[idx], skytran[idx], "+", label='Sky transmission')
-            plt.plot(self.wavelen, transmission, label='Sky tr. interpolated')
+            plt.plot(self.wavelen, self.transmission, label='Sky tr. interpolated')
             plt.xlabel("Wavelength [micron]")
             plt.ylabel("Transmission")
             #plt.show()
@@ -277,8 +325,9 @@ class LMS:
         #############################################################################
         # get trans-/emission from SimMETIS
         #
-        print("Steaming up optical train")
-        print("Telescope temperature:", self.cmds["SCOPE_TEMPERATURE"])
+        if self.verbose:
+            print("Steaming up optical train")
+            print("Telescope temperature:", self.cmds["SCOPE_TEMPERATURE"])
 
         # Create transmission curve.
         opttrain = sm.OpticalTrain(self.cmds)
@@ -311,18 +360,22 @@ class LMS:
             plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
-        transmission *= tc_trans(self.wavelen)
+        # combine transmission of atmosphere, telescope, and LMS (the Roy factor)
+        self.transmission *= tc_trans(self.wavelen) * 0.712599
 
         #############################################################################
         #
         # transmit the source cube!
         #
-        self.target_cube = self.src_cube * transmission[:, np.newaxis, np.newaxis]
+        self.target_cube = self.src_cube * self.transmission[:, np.newaxis, np.newaxis]
         self.add_cmds_to_header(self.target_hdr)
 
         # do not add skycal-file to self.cmds!
         # the optical train will be confused if we try to re-run it.
-        self.target_hdr['SKYCAL_FILE'] = skyfile
+        if len(skyfile) > 50:
+            self.target_hdr['SKYCAL_FILE'] = "... " + skyfile[-50:]
+        else:
+            self.target_hdr['SKYCAL_FILE'] = skyfile
 
         if plot:
             plt.plot(self.wavelen, self.target_cube[:, self.plotpix[0], self.plotpix[1]])
@@ -352,17 +405,20 @@ class LMS:
         ph_mirror = interp1d(lam, ph_mirr_um,
                              kind='linear', bounds_error=False, fill_value=0.)
 
-        print("Pix_res: ", opttrain.cmds.pix_res)
-
         mirr_list = self.cmds.mirrors_telescope
         mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
                                        mirr_list["Inner"]**2)
-        print("Mirror area: ", mirr_area, "[m^2]")
+        if self.verbose:
+            print("Pix_res: ", opttrain.cmds.pix_res)
+            print("Mirror area: ", mirr_area, "[m^2]")
 
         ph_atmo_um = sky_emission * mirr_area * tc_trans(det_wavelen)
-        ph_mirrors = ph_mirror(det_wavelen)
+        ph_mirrors = ph_mirror(det_wavelen) * 1.25
+        # Leo's fudge-factor to account for spiders and entrance window
 
         if plot:
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(right=0.8)
             plt.plot(det_wavelen, ph_atmo_um, '+', label='Atmosphere')
             plt.plot(det_wavelen, ph_mirrors, label='Telescope')
             plt.plot(det_wavelen, ph_atmo_um+ph_mirrors, label='total')
@@ -372,9 +428,11 @@ class LMS:
             plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
             plt.show()
 
-        self.background = ph_atmo_um+ph_mirrors 	# photons/s/um/pixel
+        self.background = (ph_atmo_um+ph_mirrors) * 0.712599 	# photons/s/um/pixel
+        # apply Roy factor for transmission of LMS
 
-        print("Final telescope temperature:", opttrain.cmds["SCOPE_TEMPERATURE"])
+        if self.verbose:
+            print("Final telescope temperature:", opttrain.cmds["SCOPE_TEMPERATURE"])
 
 
 
@@ -395,25 +453,40 @@ class LMS:
         psf_fits = fits.open(psf_name)
         self.cmds['SCOPE_PSF_FILE'] = psf_name
 
-        ext = psf_fits.index_of("PSF_3.80UM")
-        print("PSF for 3.8um is extension", ext)
+        try:
+            ext = psf_fits.index_of("PSF_3.80UM")
+        except KeyError:
+            print("")
+            print("+==============================================================================+")
+            print("|EXTENSION PSF_3.80UM NOT FOUND!                                               |")
+            print("|It appears you try to use a FITS-file that does not contain a proper METIS-PSF|")
+            print("|You may use any of the PSF-files found on the website:                        |")
+            print("|              http://www.mpia.de/homes/feldt/METIS_AO/table.html              |")
+            print("+==============================================================================+")
+            raise
+
+        if self.verbose:
+            print("PSF for 3.8um is extension", ext)
         psf_img = psf_fits[ext].data
         psf_hdr = psf_fits[ext].header
 
         psf_pixscale = psf_hdr['PIXSCALE']
-        print("PSF pixel scale is",
-              psf_pixscale, "mas/pix @ 3.8 um,", psf_img.shape, "pixels")
+        if self.verbose:
+            print("PSF pixel scale is",
+                  psf_pixscale, "mas/pix @ 3.8 um,", psf_img.shape, "pixels")
 
         psf_pixscale *= np.mean(self.wavelen) / 3.8
-        print("PSF pixel scale is", psf_pixscale, "mas/pix @", np.mean(self.wavelen), "um,")
 
         scale = psf_pixscale / self.src_pixscale[0].value
-        print("Scale factor", scale)
+        if self.verbose:
+            print("PSF pixel scale is", psf_pixscale, "mas/pix @", np.mean(self.wavelen), "um,")
+            print("Scale factor", scale)
 
         psf_scaled = _scale_image(psf_img, scale)
 
         norm = np.sum(psf_scaled)
-        print("Normalizing PSF by factor", norm)
+        if self.verbose:
+            print("Normalizing PSF by factor", norm)
         psf_scaled /= norm
 
         # crop to size needed for input data
@@ -422,15 +495,19 @@ class LMS:
 
         psf_center = np.asarray(psf_scaled.shape) // 2
         img_shape = self.target_cube.shape[1:3]
-        print("Cropping PSF to [",
-              psf_center[0]-img_shape[0], ":", psf_center[0]+img_shape[0]+1, ",",
-              psf_center[1]-img_shape[1], ":", psf_center[1]+img_shape[1]+1, "]")
+        if psf_center[0] > img_shape[0] and psf_center[1] > img_shape[1]:
+            if self.verbose:
+                print("Cropping PSF to [",
+                      psf_center[0]-img_shape[0], ":", psf_center[0]+img_shape[0]+1, ",",
+                      psf_center[1]-img_shape[1], ":", psf_center[1]+img_shape[1]+1, "]")
 
-        psf_scaled = psf_scaled[(psf_center[0]-img_shape[0]):(psf_center[0]+img_shape[0]+1),
-                                (psf_center[1]-img_shape[1]):(psf_center[1]+img_shape[1]+1)]
+            psf_scaled = psf_scaled[(psf_center[0]-img_shape[0]):(psf_center[0]+img_shape[0]+1),
+                                    (psf_center[1]-img_shape[1]):(psf_center[1]+img_shape[1]+1)]
+        else:
+            print("Image is too large, not cropping PSF")
 
         if write_psf is not None:
-            print("Writing scaled PSF to ", write_psf)
+            print("Writing scaled PSF to", write_psf)
             psf_hdr['EXTNAME'] = None
             hdu = fits.PrimaryHDU(psf_scaled)
             hdu.header['WAVELENG'] = np.mean(self.wavelen)
@@ -465,21 +542,21 @@ class LMS:
         print()
         print("--------------------Convolution with LSF--------------------")
 
-        delta_wave = np.mean(self.wavelen[1:] - self.wavelen[:-1])
-        print("step in wavelen:", delta_wave)
-
         # what if the input is not linear in wavelength?
         # should we interpolate on the output grid first?
 
+        delta_wave = np.mean(self.wavelen[1:] - self.wavelen[:-1])
         deltav = const.c * delta_wave/np.mean(self.wavelen)
-
-        print("step in velocity:", deltav)
 
 	# FWHM=3km/s, see wikipedia.org/wiki/Gaussian_function
         stddev = 3.*u.km/u.s / (2.*np.sqrt(2.*np.log(2.)))
         stddev /= deltav
         stddev = stddev.to(u.dimensionless_unscaled)
-        print("deltav =", deltav, "=> stddev =", stddev, "pixel")
+
+        if self.verbose:
+            print("step in wavelen:", delta_wave)
+            print("step in velocity:", deltav)
+            print("      => stddev =", stddev, "pixel")
 
         gauss = ac.Gaussian1DKernel(stddev)
 
@@ -506,6 +583,9 @@ class LMS:
         Scale to Detector pixels (spatially and spectrally)
         '''
 
+        print()
+        print("--------------------Scale to detector pixels--------------------")
+
         # First interpolate spectrally
 
         naxis3, naxis2, naxis1 = self.target_cube.shape
@@ -527,7 +607,7 @@ class LMS:
                 intpol = interp1d(in_velos, self.target_cube[:, i_y, i_x],
                                   kind='linear', bounds_error=False, fill_value=0.)
                 scaled_cube[:, i_y, i_x] = intpol(out_velos)
-        print()
+        #print()
         self.target_cube = scaled_cube
 
         self.wcs.wcs.ctype[2] = 'VELO'
@@ -539,7 +619,8 @@ class LMS:
         # Now interpolate spatially
         #
         naxis3, naxis2, naxis1 = self.target_cube.shape
-        print("ScaleToDetector: naxis =", naxis1, naxis2, naxis3)
+        if self.verbose:
+            print("ScaleToDetector: naxis =", naxis1, naxis2, naxis3)
 
         in_x = np.arange(naxis1)
         in_y = np.arange(naxis2)
@@ -547,16 +628,27 @@ class LMS:
 
         # TODO better: scale from the center of the img
 
-        print("image pixscale from WCS:", self.src_pixscale, "/pixel")
-
         scale = self.src_pixscale.value / self.det_pixscale
-        print("Scale factor:", scale)
+
+        if self.verbose:
+            print("image pixscale from WCS:", self.src_pixscale, "/pixel")
+            print("Scale factor:", scale)
 
         self.plotpix = np.rint(self.plotpix*scale).astype(int)
 
-        # we need to scale the coord of the last pixel, not the pixel behind the end!
-        out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
-        out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
+        ## we need to scale the coord of the last pixel, not the pixel behind the end!
+        #out_x = np.arange(round((naxis1-1)*scale[0])+1) / scale[0]
+        #out_y = np.arange(round((naxis2-1)*scale[1])+1) / scale[1]
+
+        # scale from the center of the image
+        half1 = naxis1//2
+        half2 = naxis2//2
+
+        # scale the coord of the last pixel, not the pixel behind the end!
+        out_x = np.arange(half1 - round(half1*scale[1])/scale[1],
+                          half1 + round((half1-1)*scale[1])/scale[1] + 1, 1./scale[1])
+        out_y = np.arange(half2 - round(half2*scale[0])/scale[0],
+                          half2 + round((half2-1)*scale[0])/scale[0] + 1, 1./scale[0])
 
         scaled_cube = np.empty((naxis3, len(out_y), len(out_x)), self.target_cube[0,0,0].dtype)
 
@@ -565,9 +657,21 @@ class LMS:
             interp = RectBivariateSpline(in_x, in_y, self.target_cube[i,:,:], kx=1, ky=1)
             scaled_cube[i,:,:] = interp(out_x, out_y, grid=True)
 
-        print("ScaleToDetector: new shape =", scaled_cube.shape)
+        if self.verbose:
+            print("ScaleToDetector: new shape =", scaled_cube.shape)
 
         self.target_cube = scaled_cube
+
+        # new_CRPIX = old_CRPIX * new_size/old_size
+        #
+        # old_pixscale = FoV/old_size
+        # new_pixscale = FoV/new_size
+        # scale = old_pixscale / new_pixscale = FoV/old_size * new_size/FoV = new_size/old_size
+        #
+        # new_CRPIX = old_CRPIX * scale
+        #
+        self.wcs.wcs.crpix[0] = round(self.wcs.wcs.crpix[0] * scale[0])	# or [1]?
+        self.wcs.wcs.crpix[1] = round(self.wcs.wcs.crpix[1] * scale[1])
 
         self.wcs.wcs.cdelt[0] = -self.det_pixscale/3600./1000.	# convert mas/pix to deg/pix
         self.wcs.wcs.cdelt[1] =  self.det_pixscale/3600./1000.
@@ -586,6 +690,7 @@ class LMS:
         '''
         Compute SNR of the simulated observation (step 4 of the big plan)
         '''
+        # TODO: give exptime as number (in sec) oder quantity (with user-given unit)
 
         if exptime > 0.:
             self.cmds["OBS_EXPTIME"] = exptime
@@ -593,49 +698,61 @@ class LMS:
             exptime = self.cmds["OBS_EXPTIME"]
 
         if ndit > 0:
+            ndit = round(ndit)
             self.cmds["OBS_NDIT"] = ndit
         else:
-            ndit = self.cmds["OBS_NDIT"]
+            ndit = round(self.cmds["OBS_NDIT"])
 
         mirr_list = self.cmds.mirrors_telescope
         mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
                                        mirr_list["Inner"]**2) * u.m**2
-        print("Collecting mirror area: ", mirr_area)
+        if self.verbose:
+            print("Collecting mirror area: ", mirr_area)
 
         ph_cube = self.target_cube * u.Jy * mirr_area
 	# per arcsec^2, but astropy cannot convert that
         ph_cube = ph_cube.to(u.photon / (u.s * u.um),
                              equivalencies=u.spectral_density(self.restcoo)) / (u.arcsec**2)
+        # technically, we convert to photo-electrons/s/um/arcsec2,
+        # because the QE of the detector has been applied in the simmetis.OpticalTrain
 
-        print("Source peak:", np.max(ph_cube))
-        print(ph_cube.shape)
+        backgrnd = self.background * u.electron / (u.s*u.um)
 
-        backgrnd = self.background * u.photon / (u.s*u.um)
-        print("Background max:", np.max(backgrnd))
+        if self.verbose:
+            print("Source peak:", np.max(ph_cube))
+            print(ph_cube.shape)
+            print("Background max:", np.max(backgrnd))
 
         # dLambda = lambda * dv/c
-        d_lambda = (4.8 * u.um * (1.5 *u.km/u.s) / const.c).to(u.um)	# in micron
-        print("d_lambda", d_lambda)
-
+        d_lambda = (np.mean(self.wavelen)*u.um * (1.5 *u.km/u.s) / const.c).to(u.um)	# in micron
         pix_area = (self.det_pixscale/1000. * u.arcsec)**2
-        print("Pixel area", pix_area)
 
-        ph_cube *= d_lambda*pix_area
+        if self.verbose:
+            print("d_lambda", d_lambda)
+            print("Pixel area", pix_area)
+
+        ph_cube *= d_lambda*pix_area * u.electron/u.photon	# was electrons all the time
         backgrnd *= d_lambda	# per pixel
 
-        print("peak pos:", np.unravel_index(np.argmax(ph_cube), ph_cube.shape))
+        if self.verbose:
+            print("peak pos:", np.unravel_index(np.argmax(ph_cube), ph_cube.shape))
 
         print("Source peak:", np.max(ph_cube))
         print("Background: ", np.max(backgrnd))
 
         if plot:
-            plt.plot(self.det_velocities * u.m/u.s,
-                     ph_cube[:, self.plotpix[0], self.plotpix[1]], label='Source')
-            plt.plot(self.det_velocities * u.m/u.s, backgrnd, label='Background')
+            plt.figure(num=1, figsize=self.wide_figsize)
+            plt.subplots_adjust(left=0.1, right=0.75)
+            spectrum = ph_cube[:, self.plotpix[0], self.plotpix[1]]
+            plt.plot(self.det_velocities * u.m/u.s, spectrum, label='Source')
+            bf = 1
+            while np.max(backgrnd)*bf*10 < np.max(spectrum):
+                bf *= 10
+            plt.plot(self.det_velocities * u.m/u.s, backgrnd*bf, label='Background*'+str(bf))
             plt.title("Source and background, pixel ["
                       +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
             plt.xlabel("Velocity [m/s]")
-            plt.ylabel("Flux [photons/sec]")
+            plt.ylabel("Flux [e-/sec]")
             #plt.show()
         #
         # NOTE: SimMETIS.OpticalTrain includes the QE of the detector
@@ -654,8 +771,9 @@ class LMS:
             plt.title("Source and background, pixel ["
                       +str(self.plotpix[0])+","+str(self.plotpix[1])+"]")
             plt.xlabel("Velocity [m/s]")
-            plt.ylabel("Flux [photons/sec]")
+            plt.ylabel("Flux [e-/sec]")
             plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1.0))
+            plt.ylim(bottom=0)
             plt.show()
 
         # Decide on the DIT to use, full well = 100e3, we fill to 80%
@@ -677,8 +795,8 @@ class LMS:
         if np.max(ph_cube.value) < 10e3:
             warnings.warn("\nWARNING: brightest pixel has <10% of full well capacity. Your data will be noisy!")
 
-        targ_noise = np.sqrt(ph_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
-        back_noise = np.sqrt(bg_cube*u.photon + (70 * u.photon)**2)	# RON = 70e/pix/read
+        targ_noise = np.sqrt(ph_cube*u.electron + (70 * u.electron)**2)	# RON = 70e/pix/read
+        back_noise = np.sqrt(bg_cube*u.electron + (70 * u.electron)**2)	# RON = 70e/pix/read
 
         #ndit = np.round(integration_time / dit)
         #print("Total integration time", integration_time, "=> NDIT =", ndit)
@@ -698,13 +816,20 @@ class LMS:
 
         header = self.target_hdr.copy()
         header['BUNIT'] = "e/pixel"
+
+        key = 'HIERARCH '+self.cmds.cmds.popitem(last=False)[0]
+        header.set('EXPTIME', exptime, "[s] Total exposure time = DIT*NDIT", before=key)
+        header.set('DIT', dit.value, "[s] Detector integration time = EXPTIME/NDIT", before=key)
+        header.set('NDIT', ndit, "Number of integrations = EXPTIME/DIT", before=key)
         self.add_cmds_to_header(header)
 
         if write_src_w_bg is not None:
+            print("Writing source+background to \"", write_src_w_bg, '"')
             hdu = fits.PrimaryHDU(ph_cube.value, header=header)
             hdu.writeto(write_src_w_bg, overwrite=True)
 
         if write_background is not None:
+            print("Writing background to \"", write_background, '"')
             hdu = fits.PrimaryHDU(bg_cube.value, header=header)
             hdu.writeto(write_background, overwrite=True)
 
@@ -715,9 +840,48 @@ class LMS:
 
     #############################################################################
 
+    def calibrate_flux(self, hdu):
+        '''
+        do flux calibration by undoing what the simulator did so far (as much as possible)
+        input is the result of compute_snr()
+        '''
+        data = hdu.data * u.electron	# per dit, pixel, spectral channel, and M1-area
+
+        mirr_list = self.cmds.mirrors_telescope
+        mirr_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
+                                       mirr_list["Inner"]**2) * u.m**2
+
+        data = data / (hdu.header['EXPTIME'] * u.s
+                       * (np.mean(self.wavelen)*u.um * (1.5 *u.km/u.s) / const.c).to(u.um)
+                       * mirr_area)
+        # e-/s/um/m2
+
+        # wavelengths of data cube
+        det_wavelen = (self.det_velocities
+                       * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
+
+        # interpolate transmission onto wavelength-grid of detector:
+        trans = np.interp(det_wavelen, self.wavelen, self.transmission)
+
+        data /= trans[:, np.newaxis, np.newaxis]
+
+        data = (data * u.photon/u.electron).to(u.Jy,
+                                               equivalencies=u.spectral_density(self.restcoo))
+
+        data = data / (self.det_pixscale/1000. * u.arcsec)**2
+        # Jy/arcsec2
+
+        calhdu = fits.PrimaryHDU(data.value, header=hdu.header)
+        calhdu.header['BUNIT'] = ('Jy/arcsec2', 'Jansky per arcsec**2')
+        return calhdu
+
+
+    #############################################################################
+
     def save_cube(self, outname):
         '''write the data cube to a fits-file'''
 
+        print("Writing data cube to",outname)
         hdu = fits.PrimaryHDU(self.target_cube, header=self.target_hdr)
         hdu.writeto(outname, overwrite=True)
 

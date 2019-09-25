@@ -3,4 +3,3 @@ include data/*
 include doc/*
 include simmetis/tests/*
 include test/*
-exclude simmetis/spectro.py
