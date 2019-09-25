@@ -8,6 +8,9 @@
 - Q band
 - more realistic implementation of detector noise (ELFN / non-linearity / non-reciprocity for Aquarius; correlated noise for Hawaii)
 - N band: add emission from window and spiders
+- create simulated data suitable for development of prototypes of
+  pipeline algorithms
 
 ## after FDR
-- simulate raw-data and process them via the pipeline
+- simulate raw detector frames that mimic the format of METIS raw data
+  and are ready to be processed by the pipeline demonstrator
