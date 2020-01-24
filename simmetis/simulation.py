@@ -2,24 +2,20 @@
 simulation.py
 """
 
-# from astropy.io import ascii as ioascii ## unused (OC)
-#import warnings
-#import logging
-
 import numpy as np
 
-#import simmetis as sim
 from . import source
 from .commands import UserCommands
 from .optics import OpticalTrain
 from .detector import Detector
 
-__all__ = ["run", "snr", "check_chip_positions", "limiting_mags"]
+__all__ = ["run", "snr", "check_chip_positions", "limiting_mags", "zeropoint"]
+
 
 def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
         detector_layout="small", filename=None, return_internals=False,
         filter_name=None, exptime=None, sub_pixel=False,
-        **kwargs):
+        sim_data_dir=None, **kwargs):
     """
     Run a METIS simulation with default parameters
 
@@ -61,18 +57,24 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
         Analogous to passing INST_FILTER_TC as a keyword argument
 
     exptime : int, float
-        [s] Analogous to passing OBS_EXPTIME as a keyword argument
+        [s] Total integration time. Currently, this is observed in one DIT
+            (i.e. NDIT=1). Use OBS_DIT and OBS_NDIT for more general setup.
+
+    sim_data_dir : str
+        Path to where the data is kept
 
     """
 
     if cmds is None:
-        cmds = UserCommands()
+        cmds = UserCommands(sim_data_dir=sim_data_dir)
         cmds["INST_FILTER_TC"] = "Ks"
 
-        if detector_layout.lower() in ("tiny", "small", "centre", "center"):
+        if detector_layout.lower() in ("tiny", "small", "centre", "center",
+                                       "full", "no_gaps"):
             cmds["FPA_CHIP_LAYOUT"] = detector_layout
         else:
-            cmds["FPA_CHIP_LAYOUT"] = 'full'
+            raise ValueError("detector_layout was not recognised: {}"
+                             "".format(detector_layout))
 
         if mode == "wide":
             cmds["SIM_DETECTOR_PIX_SCALE"] = 0.004
@@ -81,13 +83,17 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
             cmds["SIM_DETECTOR_PIX_SCALE"] = 0.0015
             cmds["INST_NUM_MIRRORS"] = 13
         else:
-            raise ValueError("'mode' must be either 'wide' or ' zoom', not " + mode)
+            raise ValueError("'mode' must be either 'wide' or ' zoom', not {}"
+                             "".format(mode))
 
     if filter_name is not None:
         cmds["INST_FILTER_TC"] = filter_name
 
     if exptime is not None:
-        cmds["OBS_EXPTIME"] = exptime
+        # exptime is assigned to a single DIT
+        # TODO: replace with optimised computation of DIT and NDIT
+        cmds["OBS_DIT"] = exptime
+        cmds["OBS_NDIT"] = 1
 
     # update any remaining keywords
     cmds.update(kwargs)
@@ -96,6 +102,8 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
         opt_train = OpticalTrain(cmds)
     if fpa is None:
         fpa = Detector(cmds, small_fov=False)
+
+
 
     print("Detector layout")
     print(fpa.layout)
@@ -120,7 +128,6 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
         return hdu
 
 
-
 def check_chip_positions(filename="src.fits", x_cen=17.084, y_cen=17.084,
                          n=0.3, mode="wide"):
     """
@@ -128,7 +135,6 @@ def check_chip_positions(filename="src.fits", x_cen=17.084, y_cen=17.084,
 
     THe number of stars in each grid corresponds to the id number of the chip
     """
-
 
     x = [-x_cen]*1 + [0]*2 + [x_cen]*3 + \
         [-x_cen]*4 + [0]*5 + [x_cen]*6 + \
@@ -185,6 +191,7 @@ def _make_snr_grid_fpas(filter_names=None, mmin=22, mmax=32,
     :class:`~simmetis.commands.UserCommands`
 
     """
+
     if filter_names is None:
         filter_names = ["J", "H", "Ks"]
 
@@ -207,7 +214,8 @@ def _make_snr_grid_fpas(filter_names=None, mmin=22, mmax=32,
 
         star_sep = cmd["SIM_DETECTOR_PIX_SCALE"] * 100
 
-        grid = source.star_grid(100, mmin, mmax, filter_name=filt, separation=star_sep)
+        grid = source.star_grid(100, mmin, mmax, filter_name=filt,
+                                separation=star_sep)
         grids += [grid]
 
         hdus, (cmd, opt, fpa) = run(grid, filter_name=filt, cmds=cmd,
@@ -282,7 +290,7 @@ def _get_limiting_mags(fpas, grid, exptimes, filter_names=None,
         lim_mags = []
         for exptime in exptimes:
 
-            hdus = fpa.read_out(OBS_EXPTIME=exptime)
+            hdus = fpa.read_out(OBS_DIT=exptime, OBS_NDIT=1)
             im = hdus[0].data
 
             im_width = hdus[0].data.shape[0]
@@ -339,8 +347,9 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags,
         [s] Exposure times corresponding to the signal-to-noise values
 
     limiting_mags : array, list of array
-        [mag] Limiting magnitudes for one, or more, filters for the given exposure times
-        Dimensions are (1, n) for a single filter, or (m, n) for m filters
+        [mag] Limiting magnitudes for one, or more, filters for the given
+        exposure times. Dimensions are (1, n) for a single filter, or (m, n)
+        for m filters
 
     filter_names : list
         A list of m filters. See :func:`simmetis.optics.get_filter_set`
@@ -412,15 +421,14 @@ def plot_exptime_vs_limiting_mag(exptimes, limiting_mags,
     plt.xlabel("Exposure time [sec]")
 
 
-
 def limiting_mags(exptimes=None, filter_names=None,
                   AB_corrs=None, limiting_sigma=5,
                   return_mags=True, make_graph=False,
                   mmin=22, mmax=31,
                   cmds=None, **kwargs):
-    """
-    Return or plot a graph of the limiting magnitudes for METIS
 
+    """
+    Return or plot a graph of the limiting magnitudes for MICADO
 
     Parameters
     ----------
@@ -496,15 +504,14 @@ def limiting_mags(exptimes=None, filter_names=None,
         return limiting_mags
 
 
-
 def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
               aperture_radius=4, cmds=None, **kwargs):
     """
     Get the signal to noise ratios for a series of magnitudes and exposure times
 
-    This function "observes" a grid of 100 stars equally spaced in the range [``mmin``, ``mmax``]
-    The stars are observed for all times given in ``exptime`` and the SNR for each star is returned
-    for each exposure time.
+    This function "observes" a grid of 100 stars equally spaced in the range
+    [``mmin``, ``mmax``]. The stars are observed for all times given in
+    ``exptime`` and the SNR for each star is returned for each exposure time.
 
     Parameters
     ----------
@@ -574,7 +581,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
     snr_array = []
     for exptime in exptimes:
 
-        hdu = fpa.read_out(OBS_EXPTIME=exptime)
+        hdu = fpa.read_out(OBS_DIT=exptime, OBS_NDIT=1)
         data = hdu[0].data
 
         sq_aps = []
@@ -589,6 +596,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
             bg_ap = np.copy(data[y-r_out:y+r_out+1, x-r_out:x+r_out+1])
             bg_ap[r_width:-r_width, r_width:-r_width] = 0
 
+            from astropy.stats import sigma_clipped_stats
             av, med, std = sigma_clipped_stats(bg_ap[bg_ap != 0])
             bg_stats += [[av, med, std]]
 
@@ -608,7 +616,7 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
         tot_err = np.sqrt(sig_shot**2 + bg_shot**2 + e_shot**2)
 
         snr_val = sig / tot_err
-        mask = snr > 10
+        mask = snr_val > 10
 
         log_snr = np.log10(snr_val[mask])
         p = np.polyfit(mags[mask], log_snr, 2)
@@ -617,7 +625,6 @@ def snr_curve(exptimes, mmin=20, mmax=30, filter_name="Ks",
         snr_array += [snr_fit]
 
     return snr_array, mags
-
 
 
 def plot_snr_curve(snr_array, mags, snr_markers=None):
@@ -705,6 +712,7 @@ def plot_snr_rainbow(exptimes, mags, snr_array, snr_levels=None,
 
     """
     from matplotlib import pyplot as plt
+    from matplotlib.colors import LogNorm
 
     # Set defaults
     if snr_levels is None:
@@ -837,7 +845,54 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     return snr_return
 
 
+def zeropoint(filter_name="TC_filter_Ks.dat"):
+    """
+    Returns the zero point magnitude for a SimMETIS filter
 
+    This is an end-to-end simulation which aims to take into account all transmission effects
+    incorporated in a SimMETIS simulation.
+
+    The returned zeropoint is for an exposure of 1s. Therefore, magnitudes from measured fluxes in simulated
+    images should be calculated as following
+
+    mag = -2.5*np.log10(counts/texp) + zp
+
+    where counts are the background subtracted counts, texp is the exposure time and zp is the zeropoint for
+    the filter in question, calculated here.
+
+    Parameters
+    ----------
+    filter_name: A SimMETIS filter
+
+    Returns
+    -------
+    zp: the zeropoint magnitude
+
+
+    """
+    msg = "Calculating zeropoint for filter:", filter_name
+    print(msg)
+    input_mag = 10
+    pixel_size = 0.004
+    fwhm = 3.2
+    seeing = fwhm * pixel_size
+    texp = 1
+    star = source.star(spec_type="A0V", mag=input_mag, filter_name=filter_name, x=0, y=0)
+    hdu = run(star, OBS_DIT=texp, OBS_NDIT=1,
+              INST_FILTER_TC=filter_name, SIM_DETECTOR_PIX_SCALE=pixel_size,
+              SCOPE_PSF_FILE=None, OBS_SEEING=seeing,
+              FPA_LINEARITY_CURVE=None, FPA_CHIP_LAYOUT="small", FPA_USE_NOISE="no",
+              ATMO_USE_ATMO_BG="no", SCOPE_USE_MIRROR_BG="no", INST_USE_AO_MIRROR_BG="no")
+    image = hdu[0].data
+    sky_level = np.median(image[0:200, :])
+    x1, x2 = 512 - 12 * int(fwhm), 512 + 12 * int(fwhm)
+    y1, y2 = 512 - 12 * int(fwhm), 512 + 12 * int(fwhm)
+    cut_image = image[x1:x2, y1:y2] - sky_level
+    counts = np.sum(cut_image)
+    zp = 2.5 * np.log10(counts) + input_mag
+    zp = np.round(zp, 3)
+
+    return zp
 
 
 # def snr_old(mags, filter_name="Ks", total_exptime=18000, ndit=1, cmds=None):
@@ -883,7 +938,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
         # cmd = sim.UserCommands()
     # else:
         # cmd = cmds
-    # cmd["OBS_EXPTIME"] = total_exptime / ndit
+    # cmd["OBS_DIT"] = total_exptime / ndit
     # cmd["OBS_NDIT"] = ndit
     # cmd["INST_FILTER_TC"] = filter_name
 

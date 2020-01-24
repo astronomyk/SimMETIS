@@ -1,8 +1,8 @@
 """
 A description of the Chip noise properties and their positions on the Detector
 
-Summary
--------
+Module Summary
+--------------
 This module holds three classes: ``Detector``, ``Chip`` and ``HXRGNoise``.
 
 ``Chip``
@@ -30,7 +30,8 @@ Chip
 
 See Also
 --------
-OpticalTrain, Source
+:class:`simmetis.optics.OpticalTrain`,
+:class:`simmetis.source.Source`
 
 Notes
 -----
@@ -120,8 +121,8 @@ class Detector(object):
     Generate a series of :class:`.Chip` objects for a focal plane array
 
 
-    Summary
-    -------
+    Extended Summary
+    ----------------
     The :class:`.Detector` is a holder for the series of :class:`.Chip`
     objects which make up the detector array. The main advantage of the
     :class:`.Detector` object is that the  user can read out all chips in the
@@ -148,7 +149,7 @@ class Detector(object):
         factor between the internal angular resolution and the pixel FOV
     fpa_res : float
         [mas] field of view of a single pixel
-    exptime : float
+    dit : float
         [s] exposure time of a single DIT
     tro : float
         [s] time between consecutive non-destructive readouts in up-the-ramp mode
@@ -166,7 +167,9 @@ class Detector(object):
         not yet implemented
         Save the Detector object into a FITS file
 
-    .. todo:: Open should be moved into a general function for detector.py which
+    .. todo::
+
+        Open should be moved into a general function for detector.py which
         returns a :class:`.Detector` object after reading in a saved detector
         file
 
@@ -252,8 +255,9 @@ class Detector(object):
 
         self.oversample = self.cmds["SIM_OVERSAMPLING"]
         self.fpa_res = self.cmds["SIM_DETECTOR_PIX_SCALE"]
-        self.exptime = self.cmds["OBS_EXPTIME"]
+        self.dit = self.cmds["OBS_DIT"]
         self.ndit    = self.cmds["OBS_NDIT"]
+        self.exptime = self.dit * self.ndit
         self._n_ph_atmo   = 0
         self._n_ph_mirror = 0
         self._n_ph_ao     = 0
@@ -299,7 +303,7 @@ class Detector(object):
         ----------------------------
         **kwargs are used to update the ``UserCommands`` object that controls
         the ``Detector``. Therefore any dictionary keywords can be passed in the
-        form of a dictionary, i.e. {"EXPTIME" : 60, "OBS_OUTPUT_DIR" : "./"}
+        form of a dictionary, i.e. {"OBS_DIT" : 60, "OBS_OUTPUT_DIR" : "./"}
 
         """
 
@@ -327,7 +331,7 @@ class Detector(object):
         # Time stamp for FITS header
         #creation_date = datetime.now().isoformat(timespec='seconds')
         # timespec="seconds" throws an error on some python versions
-        creation_date = datetime.now().isoformat()
+        creation_date = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
         hdulist = fits.HDUList()
 
@@ -362,6 +366,7 @@ class Detector(object):
             ######
             print("Reading out chip", self.chips[i].id, "using",
                   read_out_type)
+            print("DIT =", self.dit, "   NDIT =", self.ndit)
 
             array = self.chips[i].read_out(self.cmds,
                                            read_out_type=read_out_type)
@@ -387,8 +392,10 @@ class Detector(object):
                 pass
 
             thishdu.header["BUNIT"] = ("ADU", "")
-            thishdu.header["EXPTIME"] = (self.exptime, "[s] Exposure time")
+            thishdu.header["EXPTIME"] = (self.dit, "[s] Exposure time")
             thishdu.header["NDIT"] = (self.ndit, "Number of exposures")
+            thishdu.header["INTTIME"] = (self.exptime,
+                                         "[s] Total integration time")
             #thishdu.header["TRO"] = (self.tro,
             #                         "[s] Time between non-destructive readouts")
             thishdu.header["GAIN"] = (self.chips[i].gain, "[e-/ADU]")
@@ -421,8 +428,8 @@ class Detector(object):
         Write a ``Detector`` object out to a FITS file
 
 
-        Summary
-        -------
+        Extended Summary
+        ----------------
         Writes the important information contained in a ``Detector`` object into
         FITS file for later use. The main information written out includes: the
         layout of the detector chips, any pixel maps associated with the
@@ -453,7 +460,7 @@ class Detector(object):
 
         hdu = fits.PrimaryHDU(self.array)
         hdu.header["PIX_RES"] = self.pix_res
-        hdu.header["EXPTIME"] = self.exptime
+        hdu.header["EXPTIME"] = self.dit
         hdu.header["GAIN"]    = self.params["FPA_GAIN"]
         hdu.header["SIMMETIS"] = "FPA_NOISE"
 
@@ -473,13 +480,13 @@ class Chip(object):
     Holds the "image" as seen by a single chip in the focal plane
 
 
-    Summary
-    -------
+    Extended Summary
+    ----------------
     The ``Chip`` object contains information on where it is located in the focal
     plane array. The method ``<Source>.apply_optical_train()`` passes an image of
     the on-sky object to each ``Chip``. This image is resampled to the ``Chip``
     pixel scale. Each ``Chip`` holds the "ideal" image as an array of expectation
-    values for the level of photons arriving during an EXPTIME. The ``Chip`` then
+    values for number of photons arriving per second. The ``Chip`` then
     adds detector noise and other characteristics to the image when
     <Detector>.readout() is called.
 
@@ -542,7 +549,10 @@ class Chip(object):
 
     See Also
     --------
-    Detector, Source, UserCommands, OpticalTrain
+    Detector,
+    :class:`simmetis.source.Source`,
+    :class:`simmetis.commands.UserCommands`,
+    :class:`simmetis.optics.OpticalTrain`
 
     Examples
     --------
@@ -642,8 +652,6 @@ class Chip(object):
         """
         Add a 2D array of photon signal to the Chip
 
-        Summary
-        -------
         Add some signal photons to the detector array. Input units are expected
         to be [ph/s/pixel]
 
@@ -676,8 +684,6 @@ class Chip(object):
         """
         Add a uniform background
 
-        Summary
-        -------
         Take an EmissionCurve and some wavelength boundaries, lam_min and lam_max,
         and sum up the photons in between. Add those to the source array.
 
@@ -712,8 +718,8 @@ class Chip(object):
         """
         Adds "hot" and "dead" pixels to the array
 
-        Summary
-        -------
+        Extended Summary
+        ----------------
         applies a mask to ``.array`` representing the positions of the current
         "hot" and "dead" pixels / lines. The method either reads in a FITS file
         with locations of these pixels, or generates a series of random
@@ -772,8 +778,9 @@ class Chip(object):
         """
 
         # set up the read out
-        self.dit      = cmds["OBS_EXPTIME"] / cmds["OBS_NDIT"]
+        self.dit      = cmds["OBS_DIT"]
         self.ndit     = int(cmds["OBS_NDIT"])
+        self.exptime  = self.dit * self.ndit
         self.dark     = cmds["FPA_DARK_MEDIAN"]
         self.min_dit  = cmds["FPA_PIXEL_READ_TIME"] * \
                         (self.naxis1 * self.naxis1 / cmds["HXRG_NUM_OUTPUTS"])
@@ -879,7 +886,7 @@ class Chip(object):
 
         print("NOTE - 'up the ramp' readout only reads a single DIT")
 
-        image = self.array
+        image = self.array + self.dark
         tro   = self.min_dit
 
         nx, ny = image.shape
@@ -943,10 +950,7 @@ class Chip(object):
         Superfast read-out
         """
 
-        print(np.sum(self.array)*dit, np.min(self.array), np.max(self.array), np.median(self.array))
-        signal = self._read_out_poisson(self.array, dit, ndit)
-        print(np.sum(signal), np.min(signal), np.max(signal), np.median(signal))
-
+        signal = self._read_out_poisson(self.array + self.dark, dit, ndit)
 
         # apply the linearity curve
         lin_curve = cmds["FPA_LINEARITY_CURVE"]
@@ -955,11 +959,13 @@ class Chip(object):
                                                       lin_curve,
                                                       return_curve=True)
 
-        # superfast hack to get an approximation of the readout noise in the image
-        ro = self._read_noise_frame(cmds, n_frames=1) * np.sqrt(ndit)
+        # superfast hack to get an approximation of the readout noise
+        # in the image
+        ro = self._read_noise_frame(cmds, n_frames=1) / np.sqrt(ndit)
 
-        ############# Could work, but it's too slow for ndit > 10 ##############
-        # add 1 to the ndits, because there will always be a readout at the start
+        ########## Could work, but it's too slow for ndit > 10 ##############
+        # add 1 to the ndits, because there will always be a readout at
+        # the start
         #ro_frames = self._read_noise_frame(cmds, n_frames=max(ndit,2))
         #ro = np.sum(ro_frames, axis=0)
 
@@ -985,17 +991,26 @@ class Chip(object):
         Returns
         -------
         im_st : np.ndarray
-            Poissonified image array
+            average of ndit exposures of length dit
 
         """
+        # image2 holds the number of photons expected over a single
+        # exposure
         image2 = image * dit
-        ## does not seem to be necessary in numpy version 1.12.1 any more
-#        image2[image2 > 2.14E9] = 2.14E9
 
+        # Check for windows systems. np.poisson is limited to 32-bit
+        if os.name == "nt":
+            image2[image2 > 2.147E9] = 2.147E9      # 2**31 = 2147483648
+
+        # Each DIT is read out individually. This helps prevent overflows
+        # due to too large expected photon numbers, at the expense of increased
+        # execution time.
         im_st = np.zeros(np.shape(image))
         for _ in range(ndit):
             im_st += np.random.poisson(image2)
 
+        # Return the average image, corresponding to one DIT
+        im_st /= ndit
         return im_st.astype(np.float32)
 
 
@@ -1042,15 +1057,13 @@ class Chip(object):
             noise_cube = np.zeros((self.naxis1, self.naxis2, n_frames))
 
         if n_frames == 1:
-            return noise_cube[0,:,:]
+            return noise_cube[0, :, :]
         else:
             return noise_cube
-
 
     def _get_readout_times(self, scheme="double_corr"):
         """
         Expect that scheme = cmds["FPA_READ_OUT_SCHEME"]
-
         """
 
         if "double_corr" in scheme:
@@ -1162,9 +1175,6 @@ def open(self, filename):
     """
     Opens a saved ``Detector`` file.
 
-
-    Summary
-    -------
     ** Not yet implemented **
     ** Should be moved outside of ``Detector`` and called with
     ``detector.open()`` **
@@ -1211,8 +1221,28 @@ def open(self, filename):
 #        plt.xlabel("Distance [arcsec]", fontsize=14)
 #        plt.ylabel("Distance [arcsec]", fontsize=14)
 
-def plot_detector_layout(detector, plane="sky", clr='g-', plot_origin=False):
-    """Plot the detector layout"""
+def plot_detector_layout(detector, plane="sky", fmt='g-', plot_origin=False,
+                         label=True, **kwargs):
+    """Plot the detector layout
+
+Parameters
+==========
+
+detector : simmetis.Detector
+   The Detector to be shown
+plane : 'sky' or 'fpa'
+   Plot detector layout on the sky (in arcsec) or in the focal plane (in mm)
+fmt : matplotlib format string
+plot_origin : bool
+   Mark position pixel (1,1) for each chip.
+label : bool
+   Label the chips with their numberq
+
+Keyword arguments
+=================
+   Further keywords arguments are passed on to the matplotlib plot function
+   and can be used to set line style or colour of the detector outline.
+"""
 
     from matplotlib import pyplot as plt
     npts = 101
@@ -1243,7 +1273,7 @@ def plot_detector_layout(detector, plane="sky", clr='g-', plot_origin=False):
         xworld, yworld = thewcs.all_pix2world(xpix, ypix, 1)
         xworld -= thewcs.wcs.crval[0]
         yworld -= thewcs.wcs.crval[1]
-        plt.plot(xworld * scale, yworld * scale, clr)
+        plt.plot(xworld * scale, yworld * scale, fmt, **kwargs)
 
         if plot_origin:
             x0, y0 = thewcs.all_pix2world(1, 1, 1)
@@ -1254,7 +1284,8 @@ def plot_detector_layout(detector, plane="sky", clr='g-', plot_origin=False):
         xcen, ycen = thewcs.all_pix2world(chip.naxis1 / 2, chip.naxis2 / 2, 1)
         xcen -= thewcs.wcs.crval[0]
         ycen -= thewcs.wcs.crval[1]
-        plt.text(xcen * scale, ycen * scale, chip.id)
+        if label:
+            plt.text(xcen * scale, ycen * scale, chip.id)
 
     plt.axes().set_aspect('equal')
     if plane == 'sky':

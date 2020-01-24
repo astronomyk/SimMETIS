@@ -1,8 +1,8 @@
 """
 This module contains classes which control how a simulation is run
 
-Summary
--------
+Module Summary
+--------------
 UserCommands is essentially a dictionary that holds all the variables that
 the user may wish to change. It also has some set variables like ``pix_res``
 that can be accessed directly, instead of from the dictionary.
@@ -25,8 +25,8 @@ See Also
 --------
 Classes that require a ``UserCommands`` object directly include:
 
-* ``Detector``
-* ``OpticalTrain``
+* :class:`simmetis.Detector`
+* :class:`simmetis.OpticalTrain`
 
 
 Notes
@@ -66,8 +66,7 @@ import logging
 from collections import OrderedDict
 
 import numpy as np
-import astropy.io.ascii as ioascii    # ascii redefines builtin ascii().
-#from astropy.io import fits  # unused
+import astropy.io.ascii as ioascii
 
 import simmetis as sim
 from . import spectral as sc
@@ -83,8 +82,8 @@ class UserCommands(object):
     """
     An extended dictionary with the parameters needed for running a simulation
 
-    Summary
-    -------
+    Extended Summary
+    ----------------
     A :class:`.UserCommands` object contains a dictionary which holds all the keywords
     from the ``default.config`` file. It also has attributes which represent the
     frequently used variables, i.e. ``pix_res``, ``lam_bin_edges``, ``exptime``,
@@ -172,18 +171,10 @@ class UserCommands(object):
     values()
         returns the values in the ``UserCommands.cmds`` dictionary
 
-    Raises
-    ------
-
     See Also
     --------
-    Detector, OpticalTrain
-
-    Notes
-    -----
-
-    References
-    ----------
+    :class:`simmetis.detector.Detector`,
+    :class:`simmetis.optics.OpticalTrain`
 
     Examples
     --------
@@ -208,8 +199,6 @@ class UserCommands(object):
 
 
     """
-
-
     def __init__(self, filename=None, sim_data_dir=None):
 
         """
@@ -247,10 +236,9 @@ class UserCommands(object):
             self.cmds['SIM_DATA_DIR'] = sim_data_dir
 
         # If we have no SIM_DATA_DIR from config or parameter, exit.
-        if (self.cmds['SIM_DATA_DIR'] == 'None' or
-            self.cmds['SIM_DATA_DIR'] is None):
-            raise ValueError("""Please specify config file and/or sim_data_dir!""")
-
+        if self.cmds['SIM_DATA_DIR'] == 'None' \
+           or self.cmds['SIM_DATA_DIR'] is None:
+            raise ValueError("Please specify config file and/or sim_data_dir!")
 
         # add the instrument-specific data directory to the package
         # search path
@@ -286,8 +274,6 @@ class UserCommands(object):
         if self.verbose and filename is not None:
             print("Read in parameters from " + filename)
             logging.debug("Read in parameters from " + filename)
-
-
 
     def update(self, new_dict):
         """
@@ -329,12 +315,12 @@ class UserCommands(object):
 
         Change a single command
 
-            >>> my_cmds["OBS_EXPTIME"] = 60
+            >>> my_cmds["OBS_DIT"] = 60
 
 
         Change a series of commands at once
 
-            >>> new_cmds = {"OBS_EXPTIME" : 60 , "OBS_NDIT" : 10}
+            >>> new_cmds = {"OBS_DIT" : 60 , "OBS_NDIT" : 10}
             >>> my_cmds.update(new_cmds)
 
 
@@ -357,20 +343,17 @@ class UserCommands(object):
         self._default_data()
         self._update_attributes()
 
-
     def keys(self):
         """
         Return the keys in the `UserCommands.cmds` dictionary
         """
         return self.cmds.keys()
 
-
     def values(self):
         """
         Return the values in the `UserCommands.cmds` dictionary
         """
         return self.cmds.values()
-
 
     def writeto(self, filename="commands.config"):
         """
@@ -394,7 +377,6 @@ class UserCommands(object):
         with open(filename, "w") as fd1:
             fd1.write(outstr)
 
-
     def _convert_none(self):
         """
         Turn all string "none" or "None" values into python ``None`` values
@@ -403,7 +385,6 @@ class UserCommands(object):
             value = self.cmds[key]
             if isinstance(value, str) and value.lower() == "none":
                 self.cmds[key] = None
-
 
     def _find_files(self):
         """
@@ -436,7 +417,6 @@ class UserCommands(object):
                 else:
                     self.cmds[key] = fname
 
-
     def _default_data(self):
         """
         Input system-specific path names for the default package data files
@@ -454,20 +434,20 @@ class UserCommands(object):
                 self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_SCAO.fits")
             elif self.cmds["SCOPE_PSF_FILE"].lower() in ("poppy", "ideal"):
                 self.cmds["SCOPE_PSF_FILE"] = find_file("PSF_POPPY.fits")
-            elif (find_file(self.cmds["SCOPE_PSF_FILE"]) is None):
+            elif find_file(self.cmds["SCOPE_PSF_FILE"]) is None:
                 raise ValueError("Cannot recognise PSF file name: " +
                                  self.cmds["SCOPE_PSF_FILE"])
         elif isinstance(self.cmds["SCOPE_PSF_FILE"], PSFCube):
             pass
 
         elif self.cmds["SCOPE_PSF_FILE"] is None:
-            warnings.warn("SCOPE_PSF_FILE is None - Generating PSF from OBS_SEEING")
-            logging.debug("SCOPE_PSF_FILE is None - Generating PSF from OBS_SEEING")
+            msg = "SCOPE_PSF_FILE is None - Generating PSF from OBS_SEEING"
+            warnings.warn(msg)
+            logging.debug(msg)
 
         else:
             raise ValueError("Cannot recognise SCOPE_PSF_FILE: " +
                              self.cmds["SCOPE_PSF_FILE"])
-
 
         if self.cmds["INST_MIRROR_TC"] == "default":
             self.cmds["INST_MIRROR_TC"] = self.cmds["SCOPE_M1_TC"]
@@ -475,23 +455,21 @@ class UserCommands(object):
         if self.cmds["INST_MIRROR_AO_TC"] == "default":
             self.cmds["INST_MIRROR_AO_TC"] = self.cmds["INST_MIRROR_TC"]
 
-
         # which detector chip to use
-        if self.cmds["FPA_CHIP_LAYOUT"] in (None, "none", "default", "full"):
-            self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout.dat")
-        elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "small":
-            self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_small.dat")
-        elif self.cmds["FPA_CHIP_LAYOUT"].lower() == "tiny":
-            self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_tiny.dat")
-        elif self.cmds["FPA_CHIP_LAYOUT"].lower() in ("centre", "central",
-                                                      "middle", "center"):
-            self.cmds["FPA_CHIP_LAYOUT"] = \
-                find_file("FPA_chip_layout_centre.dat")
+        layout_dict = {"tiny" : "_tiny",
+                       "small" : "_small",
+                       "none": "_small",
+                       "centre" : "_centre",
+                       "center" : "_centre",
+                       "full" : "",
+                       "all" : ""}
 
+        if self.cmds["FPA_CHIP_LAYOUT"] in layout_dict:
+            layout = layout_dict[self.cmds["FPA_CHIP_LAYOUT"]]
+            fname = "FPA_chip_layout" + layout + ".dat"
+            self.cmds["FPA_CHIP_LAYOUT"] = fname
 
+        self.cmds["FPA_CHIP_LAYOUT"] = find_file(self.cmds["FPA_CHIP_LAYOUT"])
 
     def _update_attributes(self):
         """
@@ -514,9 +492,8 @@ class UserCommands(object):
 
         i = np.where(self.mirrors_telescope["Mirror"] == "M1")[0][0]
         self.diameter = self.mirrors_telescope["Outer"][i]
-        self.area = np.pi / 4 * (self.diameter**2 - \
+        self.area = np.pi / 4 * (self.diameter**2 -
                                  self.mirrors_telescope["Inner"][i]**2)
-
 
         # Check for a filter curve file or a standard broadband name
         if isinstance(self.cmds["INST_FILTER_TC"], str):
@@ -560,8 +537,8 @@ class UserCommands(object):
         self.lam_res = self.cmds["SIM_LAM_TC_BIN_WIDTH"]
         self.lam = np.arange(lam_min, lam_max + 1E-7, self.lam_res)
 
-        #self.lam_psf_res = self.cmds["SIM_LAM_PSF_BIN_WIDTH"]
-        #self.lam_bin_edges = np.arange(lam_min,
+        # self.lam_psf_res = self.cmds["SIM_LAM_PSF_BIN_WIDTH"]
+        # self.lam_bin_edges = np.arange(lam_min,
         #                               lam_max + self.lam_psf_res + 1E-7,
         #                               self.lam_psf_res)
         # make lam_bin_edges according to how great the ADC offsets are
@@ -569,8 +546,8 @@ class UserCommands(object):
         self.lam_bin_centers = 0.5 * (self.lam_bin_edges[1:] + \
                                       self.lam_bin_edges[:-1])
 
-        self.exptime = self.cmds["OBS_EXPTIME"]
-
+        # total integration time. TODO necessary?
+        self.exptime = self.cmds['OBS_DIT'] * self.cmds['OBS_NDIT']
 
         # replace 'none', 'None' with None
         self._convert_none()
@@ -579,7 +556,6 @@ class UserCommands(object):
         self._get_total_wfe()
 
         self._split_categories()
-
 
     def _get_total_wfe(self):
         """
@@ -599,7 +575,6 @@ class UserCommands(object):
             tot_wfe = 0
 
         self.cmds["INST_TOTAL_WFE"] = tot_wfe
-
 
     def _get_lam_bin_edges(self, lam_min, lam_max):
         """
@@ -629,13 +604,13 @@ class UserCommands(object):
         effectiveness = self.cmds["INST_ADC_PERFORMANCE"] / 100.
 
         # This is redundant because also need to look at the PSF width
-        #if effectiveness == 1.:
+        # if effectiveness == 1.:
         #    lam_bin_edges = np.array([lam_min, lam_max])
         #    return lam_bin_edges
 
         shift_threshold = self.cmds["SIM_ADC_SHIFT_THRESHOLD"]
 
-        ## get the angle shift for each slice
+        # get the angle shift for each slice
         lam = np.arange(lam_min, lam_max + 1E-7, 0.001)
         zenith_distance = sim.utils.airmass2zendist(self.cmds["ATMO_AIRMASS"])
         angle_shift = atmospheric_refraction(lam,
@@ -646,14 +621,14 @@ class UserCommands(object):
                                              self.cmds["SCOPE_LATITUDE"],
                                              self.cmds["SCOPE_ALTITUDE"])
 
-        ## convert angle shift into number of pixels
-        ## pixel shifts are defined with respect to last slice
+        # convert angle shift into number of pixels
+        # pixel shifts are defined with respect to last slice
         rel_shift = (angle_shift - angle_shift[-1]) / self.pix_res
         rel_shift *= (1. - effectiveness)
         if np.max(np.abs(rel_shift)) > 1000:
             raise ValueError("Pixel shifts too great (>1000), check units")
 
-        ## Rotate by the paralytic angle
+        # Rotate by the paralytic angle
         int_shift = np.array(rel_shift / shift_threshold, dtype=np.int)
         idx = [np.where(int_shift == i)[0][0]
                for i in np.unique(int_shift)[::-1]]
@@ -688,19 +663,17 @@ class UserCommands(object):
 
         return lam_bin_edges
 
-
     def _split_categories(self):
         """
         Generate smaller category-specific dictionaries
         """
-        self.obs   = {i:self.cmds[i] for i in self.cmds.keys() if "OBS" in i}
-        self.sim   = {i:self.cmds[i] for i in self.cmds.keys() if "SIM" in i}
-        self.atmo  = {i:self.cmds[i] for i in self.cmds.keys() if "ATMO" in i}
+        self.obs = {i:self.cmds[i] for i in self.cmds.keys() if "OBS" in i}
+        self.sim = {i:self.cmds[i] for i in self.cmds.keys() if "SIM" in i}
+        self.atmo = {i:self.cmds[i] for i in self.cmds.keys() if "ATMO" in i}
         self.scope = {i:self.cmds[i] for i in self.cmds.keys() if "SCOPE" in i}
-        self.inst  = {i:self.cmds[i] for i in self.cmds.keys() if "INST" in i}
-        self.fpa   = {i:self.cmds[i] for i in self.cmds.keys() if "FPA" in i}
-        self.hxrg  = {i:self.cmds[i] for i in self.cmds.keys() if "HXRG" in i}
-
+        self.inst = {i:self.cmds[i] for i in self.cmds.keys() if "INST" in i}
+        self.fpa = {i:self.cmds[i] for i in self.cmds.keys() if "FPA" in i}
+        self.hxrg = {i:self.cmds[i] for i in self.cmds.keys() if "HXRG" in i}
 
     def __str__(self):
         if self.cmds["CONFIG_USER"] is not None:
@@ -718,19 +691,22 @@ class UserCommands(object):
         if key not in self.cmds.keys():
             raise ValueError(key+" not in UserCommands.keys()")
 
+        if isinstance(val, str) and key == "INST_FILTER_TC" \
+                and "TC_filter" not in val:
+            val = "TC_filter_{}.dat".format(val)
+
         self.cmds[key] = val
         self._find_files()
         self._default_data()
         self._update_attributes()
 
-
-    ### Add to the update that all the cmds.variable are updated when
-    ### the dicts are updated
+    # Add to the update that all the cmds.variable are updated when
+    # the dicts are updated
 
 
 def dump_defaults(filename=None, selection="freq"):
-    ## OC, 2016-08-11: changed parameter from 'type' to 'selection' as
-    ##    'type' redefines built-in
+    # OC, 2016-08-11: changed parameter from 'type' to 'selection' as
+    #    'type' redefines built-in
     """
     Dump the frequent.config file to a path specified by the user
 
@@ -750,9 +726,8 @@ def dump_defaults(filename=None, selection="freq"):
 
     if filename is None:
         gname = os.path.join(__pkg_dir__, "data", fname)
-        f = open(gname, "r")
-        print(f.read())
-        f.close()
+        with open(gname, "r") as fd1:
+            print(fd1.read())
         return None
     else:
         path, gname = os.path.split(filename)
@@ -766,7 +741,7 @@ def dump_defaults(filename=None, selection="freq"):
 
 
 def dump_chip_layout(path=None):
-    ## OC, 2016-08-11: changed parameter from 'dir' (redefines built-in)
+    # OC, 2016-08-11: changed parameter from 'dir' (redefines built-in)
     """
     Dump the FPA_chip_layout.dat file to a path specified by the user
 
@@ -778,9 +753,8 @@ def dump_chip_layout(path=None):
     fname = find_file("FPA_chip_layout.dat")
 
     if path is None:
-        f = open(fname, "r")
-        print(f.read())
-        f.close()
+        with open(fname, "r") as fd1:
+            print(fd1.read())
     else:
         path = os.path.dirname(path)
         shutil.copy(fname, path)
@@ -808,9 +782,8 @@ def dump_mirror_config(path=None, what="scope"):
         fname = find_file("EC_mirrors_ao.tbl")
 
     if path is None:
-        f = open(fname, "r")
-        print(f.read())
-        f.close()
+        with open(fname, "r") as fd1:
+            print(fd1.read())
     else:
         path = os.path.dirname(path)
         shutil.copy(fname, path)

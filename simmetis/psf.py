@@ -109,28 +109,22 @@ import scipy.ndimage.interpolation as spi
 from scipy.signal import fftconvolve
 
 from astropy.io import fits
-#from astropy import units as u   ## unused (OC)
+from astropy import units as u
 from astropy.convolution import Moffat2DKernel, Gaussian2DKernel
-#from astropy.convolution import convolve_fft   ## unused
+#from astropy.convolution import convolve_fft   # unused
 from astropy.convolution import Kernel2D
 from astropy.modeling.core import Fittable2DModel
 from astropy.modeling.parameters import Parameter
 
+# Field Varying PSFs
+from .fv_psf import FieldVaryingPSF
+
 from . import utils
 
-try:
-    import poppy
-except:
-    print("""Optional package poppy is not installed:
-       Functions beginning with "poppy_" will not work.
-       See http://pythonhosted.org/poppy/""")
-
-
-## TODO
+# TODO
 # - Add a ellipticity to the GaussianPSF
 # - Make sure MoffatPSF works
 
-#__all__ = []
 __all__ = ["PSF", "PSFCube",
            "MoffatPSF", "MoffatPSFCube",
            "AiryPSF", "AiryPSFCube",
@@ -138,8 +132,9 @@ __all__ = ["PSF", "PSFCube",
            "DeltaPSF", "DeltaPSFCube",
            "CombinedPSF", "CombinedPSFCube",
            "UserPSF", "UserPSFCube",
-           #"poppy_eelt_psf", "poppy_ao_psf", "seeing_psf",
-           "get_eelt_segments", "make_foreign_PSF_cube"
+           "poppy_eelt_psf", "poppy_ao_psf", "seeing_psf",
+           "get_eelt_segments", "make_foreign_PSF_cube",
+           "FieldVaryingPSF",
            ]
 
 
@@ -555,7 +550,7 @@ class MoffatPSF(PSF):
 
         super(MoffatPSF, self).__init__(size, pix_res)
 
-        beta = 4.765 ### Trujillo et al. 2001
+        beta = 4.765 ## Trujillo et al. 2001
         alpha = self.fwhm/(2 * np.sqrt(2**(1/beta) - 1))
         self.info["Type"] = "Moffat"
         self.info['description'] = "Moffat PSF, FWHM = %.1f, alpha = %.1f"\
@@ -564,7 +559,6 @@ class MoffatPSF(PSF):
 
         self.set_array(Moffat2DKernel(alpha, beta, x_size=self.size,
                                       y_size=self.size, mode=mode).array)
-
 
 
 class CombinedPSF(PSF):
@@ -598,7 +592,7 @@ class CombinedPSF(PSF):
             size_list = [psf.size for psf in psf_list]
             size = int(np.max(size_list) // 2) * 2 + 1
 
-        ## Compensate for the shift in centre due to a DeltaPSF
+        # Compensate for the shift in centre due to a DeltaPSF
         shifts = np.asarray([(0, 0)] + [psf.position for psf in psf_list \
                                         if psf.info["Type"] == "Delta"])
         size += 2 * np.max(shifts)
@@ -616,7 +610,6 @@ class CombinedPSF(PSF):
         self.info['description'] = "Combined PSF from " + str(len(psf_list)) \
                                                                 + "PSF objects"
         self.set_array(arr_tmp)
-
 
 
 class UserPSF(PSF):
@@ -676,20 +669,19 @@ class UserPSF(PSF):
             self.resize(kwargs["size"])
 
 
-
 ###############################################################################
 #                       psf and psf subclasses                        #
 ###############################################################################
 
 # (Sub)Class    Needed              Optional
 # PSF           size, pix_res
-# DeltaPSF                          pix_res=0.004, size=f(position), position=(0,0)
+# DeltaPSF                       pix_res=0.004, size=f(position), position=(0,0)
 # AiryPSF       fwhm                pix_res=0.004, size=f(fwhm)
 # GaussianPSF   fwhm                pix_res=0.004, size=f(fwhm)
 # MoffatPSF     fwhm                pix_res=0.004, size=f(fwhm)
 # CombinedPSFCube   psf_list            size=f(psf_list)
-# UserPSFCube       filename,           pix_res=0.004, size=f(filename), fits_ext=0
-
+# UserPSFCube       filename,        pix_res=0.004, size=f(filename), fits_ext=0
+#
 #    Keywords:
 #    - type:
 #    - lam_bin_centers
@@ -771,7 +763,7 @@ class PSFCube(object):
 
         """
 
-        ## TODO: Check whether this makes sense
+        # TODO: Check whether this makes sense
         self.psf_slices = [psf.resample(new_pix_res) for psf in self.psf_slices]
 
     def export_to_fits(self, filename, clobber=True):
@@ -784,18 +776,18 @@ class PSFCube(object):
 
         """
 
-        ## TODO: use header_info or drop it (OC)
-        ## KL: done
+        # TODO: use header_info or drop it (OC)
+        # KL: done
 
         ext_list = fits.HDUList()
 
-        #for i in range(len(self)):
+        # for i in range(len(self)):
         #    psf = self.psf_slices[i]
         for i, psf in enumerate(self.psf_slices):
-            #if i == 0:
+            # if i == 0:
             #    hdu = fits.PrimaryHDU(psf.array)
-            #else:
-            ## PrimaryHDUs are typically empty. Not necessary (OC)
+            # else:
+            # PrimaryHDUs are typically empty. Not necessary (OC)
             hdu = fits.ImageHDU(psf.array)
             hdu.header["CDELT1"] = (psf.pix_res, "[arcsec] - Pixel resolution")
             hdu.header["CDELT2"] = (psf.pix_res, "[arcsec] - Pixel resolution")
@@ -809,7 +801,6 @@ class PSFCube(object):
             ext_list.append(hdu)
 
         ext_list.writeto(filename, clobber=clobber, checksum=True)
-
 
     def convolve(self, kernel_list):
         """
@@ -831,7 +822,6 @@ class PSFCube(object):
             self.psf_slices[i].set_array(tmp.array)
         self.info["Type"] = "Complex"
 
-
     def nearest(self, lam):
         """
         Returns the PSF closest to the desired wavelength, lam [um]
@@ -850,7 +840,6 @@ class PSFCube(object):
         i = utils.nearest(self.lam_bin_centers, lam)
         return self.psf_slices[i]
 
-
     def __str__(self):
         return self.info['description']
 
@@ -862,7 +851,6 @@ class PSFCube(object):
 
     def __len__(self):
         return len(self.psf_slices)
-
 
     def __mul__(self, x):
         newpsf = deepcopy(self)
@@ -880,8 +868,6 @@ class PSFCube(object):
             newpsf[i].set_array(self.psf_slices[i] * y[i])
         return newpsf
 
-
-
     def __add__(self, x):
         newpsf = deepcopy(self)
 
@@ -897,7 +883,6 @@ class PSFCube(object):
         for i in np.arange(len(self.psf_slices)):
             newpsf[i].set_array(self.psf_slices[i] + y[i])
         return newpsf
-
 
     def __sub__(self, x):
         newpsf = deepcopy(self)
@@ -915,8 +900,6 @@ class PSFCube(object):
             newpsf[i].set_array(self.psf_slices[i] - y[i])
         return newpsf
 
-
-
     def __rmul__(self, x):
         self.__mul__(x)
 
@@ -925,7 +908,6 @@ class PSFCube(object):
 
     def __rsub__(self, x):
         self.__sub__(x)
-
 
 
 class DeltaPSFCube(PSFCube):
@@ -1081,6 +1063,7 @@ class MoffatPSFCube(PSFCube):
         self.info['description'] = "List of Moffat function PSFs"
         self.info["Type"] = "MoffatCube"
 
+
 class CombinedPSFCube(PSFCube):
     """
     Generate a list of CombinedPSFCubes from the list of psfs in psf_list
@@ -1101,7 +1084,7 @@ class CombinedPSFCube(PSFCube):
         if not (isinstance(psf_list, list) and len(psf_list) >= 2):
             raise ValueError("psf_list only takes a list of psf objects")
 
-        ## Check that the wavelengths are equal
+        # Check that the wavelengths are equal
         lam_list = [cube.lam_bin_centers for cube in psf_list]
         if not all([all(lam == lam_list[0]) for lam in lam_list]):
             raise ValueError("Wavelength arrays of psf cubes are not equal")
@@ -1160,22 +1143,27 @@ class UserPSFCube(PSFCube):
 
         n_slices = len(hdulist.info(output=False))
 
-
         for i in range(n_slices):
-            if "WAVE0" in hdulist[i].header.keys():
+            if "WAVE0" in hdulist[i].header:
                 psf_lam_cen += [hdulist[i].header["WAVE0"]]
-            elif "WAVELENG" in hdulist[i].header.keys():
+            elif "WAVELENG" in hdulist[i].header:
                 psf_lam_cen += [hdulist[i].header["WAVELENG"]]
             else:
-                raise ValueError("""Could not determine wavelength of PSF in
-                                 extension """ + str(i) + """. FITS file
-                                 needs either WAVE0 or WAVELENG header
-                                 keywords. \n Use simmetis.utils.add_keyword()
-                                 to add WAVELENG to the FITS header""")
+                if i == 0 and n_slices > 1:
+                    # multiple PSFs in ImageHDU extensions
+                    psf_lam_cen += [0]
+                elif i == 1 and n_slices > 2:
+                    # possible FV-PSF strehl map or table
+                    psf_lam_cen += [0]
+                else:
+                    raise ValueError("""Could not determine wavelength of PSF in
+                                     extension """ + str(i) + """. FITS file
+                                     needs either WAVE0 or WAVELENG header
+                                     keywords. \nUse simmetis.utils.add_keyword()
+                                     to add WAVELENG to the FITS header""")
             # If the wavelength is not in the 0.1-2.5 range, it must be in [m]
             if psf_lam_cen[i] < 0.1:
                 psf_lam_cen[i] *= 1E6
-
 
         # find the closest PSFs in the file to what is needed for the psf
         i_slices = utils.nearest(psf_lam_cen, lam_bin_centers)
@@ -1192,11 +1180,19 @@ class UserPSFCube(PSFCube):
             elif 'CD1_1' in hdr.keys():
                 pix_res = hdr['CD1_1']
             elif 'PIXSCALE' in hdr.keys():
+                # PIXSCALE *must* be in arcsec !!!
                 pix_res = hdr['PIXSCALE']
             else:
                 raise KeyError("Could not get pixel scale from " +
                                filename)
 
+            # Make sure that the pixel scale is in arcsec
+            if 'CUNIT1' in hdr.keys():
+                pix_res = (pix_res *
+                           u.Unit(hdr['CUNIT1'])).to(u.arcsec).value
+
+            # TODO: Is this dangerous? Prob'ly not needed if FITS file
+            # is standard.
             if pix_res > 1:
                 warnings.warn("CDELT > 1. Assuming the scale to be [mas]")
                 pix_res *= 1E-3
@@ -1230,7 +1226,6 @@ class UserPSFCube(PSFCube):
         else:
             self.info['description'] = "User PSF cube input from memory"
         self.info["Type"] = psf_slices[0].info["Type"]+"Cube"
-
 
 
 class ADC_PSFCube(DeltaPSFCube):
@@ -1281,7 +1276,7 @@ class ADC_PSFCube(DeltaPSFCube):
         para_angle = params["OBS_PARALLACTIC_ANGLE"]
         effectiveness = params["INST_ADC_PERFORMANCE"] / 100.
 
-        ## get the angle shift for each slice
+        # get the angle shift for each slice
         zenith_distance = utils.airmass2zendist(params["ATMO_AIRMASS"])
         angle_shift = [utils.atmospheric_refraction(lam,
                                                     zenith_distance,
@@ -1292,13 +1287,13 @@ class ADC_PSFCube(DeltaPSFCube):
                                                     params["SCOPE_ALTITUDE"])
                        for lam in lam_bin_centers]
 
-        ## convert angle shift into number of pixels
-        ## pixel shifts are defined with respect to last slice
+        # convert angle shift into number of pixels
+        # pixel shifts are defined with respect to last slice
         pixel_shift = (angle_shift - angle_shift[-1]) / pix_res
         if np.max(np.abs(pixel_shift)) > 1000:
             raise ValueError("Pixel shifts too great (>1000), check units")
 
-        ## Rotate by the paralytic angle
+        # Rotate by the paralytic angle
         x = -pixel_shift * np.sin(np.deg2rad(para_angle)) * (1. - effectiveness)
         y = -pixel_shift * np.cos(np.deg2rad(para_angle)) * (1. - effectiveness)
         positions = [(xi, yi) for xi, yi in zip(x, y)]
@@ -1314,10 +1309,10 @@ class ADC_PSFCube(DeltaPSFCube):
 
 
 
-## The following two classes implement a kernel for the PSF of a centrally
-## obscured circular aperture. The classes are modelled after the kernels
-## in astropy.convolution.kernel and the models in astropy.modeling.models,
-## both from astropy version 1.1.1.
+# The following two classes implement a kernel for the PSF of a centrally
+# obscured circular aperture. The classes are modelled after the kernels
+# in astropy.convolution.kernel and the models in astropy.modeling.models,
+# both from astropy version 1.1.1.
 class AiryDiskDiff2DKernel(Kernel2D):
     """
     2D kernel for PSF for annular aperture
@@ -1644,6 +1639,12 @@ def poppy_ao_psf(strehl, mode="wide", plan="A", size=1024, filename=None,
     :func:`.get_eelt_segments`
 
     """
+    try:
+        import poppy
+    except:
+        warnings.warn("""Poppy is not installed. Functions beginning with "poppy_"
+                      will not work. See http://pythonhosted.org/poppy/""")
+
     params = {"strehl"               : strehl,
               "mode"                 : mode,
               "size"                 : size,
@@ -1848,7 +1849,6 @@ def poppy_eelt_psf(plan="A", wavelength=2.2, mode="wide", size=1024,
     :func:`.get_eelt_segments`
 
     """
-
     try:
         import poppy
     except:
@@ -1960,11 +1960,11 @@ def get_eelt_segments(plan="A", missing=None, return_missing_segs=False,
         for the segments which are missing.
 
     """
-
     try:
         import poppy
     except:
-        raise ImportError("Poppy is not installed - google 'JWST POPPY'")
+        warnings.warn("""Poppy is not installed. Functions beginning with "poppy_"
+                      will not work. See http://pythonhosted.org/poppy/""")
 
     if plan.lower() == "b":
         #inner_diam = 21.9
@@ -1973,7 +1973,6 @@ def get_eelt_segments(plan="A", missing=None, return_missing_segs=False,
     else:
         first_seg = 60
         if missing is None: missing = 0
-
 
     ap = poppy.MultiHexagonAperture(flattoflat=1.256, gap=0.004,
                                                     segmentlist=np.arange(2000))

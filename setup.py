@@ -2,13 +2,16 @@
 """
 SimMETIS: A python package to simulate METIS, based on SimCADO
 """
-
+from sys import version_info
 from datetime import datetime
-from distutils.core import setup
+import setuptools
+import pytest  # not needed, but stops setup being included by sphinx.apidoc
+from io import open     # in py3 just an alias to builtin 'open'.
+                        # In py2.7, allows encoding='utf-8'
 
 # Version number
 MAJOR = 0
-MINOR = 2
+MINOR = 3
 ATTR = ''
 VERSION = '%d.%d%s' % (MAJOR, MINOR, ATTR)
 
@@ -21,27 +24,34 @@ version = '{}'
 date    = '{}'
 """
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %T GMT')
-    with open(filename, 'w') as fd:
-        fd.write(cnt.format(VERSION, timestamp))
+    with open(filename, 'w', encoding='utf-8') as fd:
+        if version_info.major == 2:
+            fd.write(cnt.format(VERSION, timestamp).decode('utf-8'))
+        else:
+            fd.write(cnt.format(VERSION, timestamp))
+
+
+with open("README.md", "r", encoding='utf-8') as fh:
+    long_description = fh.read()
 
 
 def setup_package():
     # Rewrite the version file every time
     write_version_py()
 
-    setup(name = 'SimMETIS',
-          version = VERSION,
-          description = "METIS Instrument simulator",
-          author = "Kieran Leschinski, Oliver Czoske, Rainer Köhler, Leonard Burtscher, Roy van Boekel",
-          author_email = """kieran.leschinski@unive.ac.at,
-                            oliver.czoske@univie.ac.at,
-                            Rainer.Koehler@univie.ac.at,
-                            burtscher@strw.leidenuniv.nl
-                            boekel@mpia.de""",
-          url = "http://metis.strw.leidenuniv.nl/wiki/doku.php?id=sim:simulator",
-          packages=['simmetis'],
-          package_data = {'simmetis': ['data/*']}
-          )
+    setuptools.setup(name='SimMETIS',
+                     version=VERSION,
+                     description="METIS Instrument simulator",
+                     author="Kieran Leschinski, Oliver Czoske, Rainer Köhler, Leonard Burtscher, Roy van Boekel",
+                     author_email ="""kieran.leschinski@unive.ac.at,
+                     oliver.czoske@univie.ac.at,
+                     Rainer.Koehler@univie.ac.at,
+                     burtscher@strw.leidenuniv.nl
+                     boekel@mpia.de""",
+                     url="http://metis.strw.leidenuniv.nl/wiki/doku.php?id=sim:simulator",
+                     packages=['simmetis'],
+                     package_data={'simmetis': ['data/*']}
+    )
 
 
 if __name__ == '__main__':

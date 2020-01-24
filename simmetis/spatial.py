@@ -183,7 +183,7 @@ def derotator(arr, cmds):
     if cmds["INST_DEROT_PERFORMANCE"] < 100.:
         eff = 1. - (cmds["INST_DEROT_PERFORMANCE"] / 100.)
         kernel = cmds["INST_DEROT_PROFILE"]
-        angle = eff * cmds["OBS_EXPTIME"] * 15 / 3600.
+        angle = eff * cmds["OBS_DIT"] * 15 / 3600.
 
         edge_smear = angle / cmds.pix_res
         if edge_smear > 50:
@@ -356,8 +356,9 @@ def get_distorion_offsets(x, y, dist_map_hdus, corners):
 
     See Also
     --------
-    make_distortion_maps()
-    astropy.io.fits.HDUList, astropy.io.fits.PrimaryHDU
+    make_distortion_maps:
+    astropy.io.fits.HDUList:
+    astropy.io.fits.PrimaryHDU:
 
     """
 

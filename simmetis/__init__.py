@@ -22,8 +22,6 @@ from . import optics
 from . import commands
 from . import source
 
-#from . import optics_utils
-#from . import defaults
 from . import simulation
 
 # spectro is not yet in source distribution
@@ -31,8 +29,10 @@ try:
     from . import spectro
 except ImportError:
     pass
-
-from .version import version as __version__
+try:
+    from .version import version as __version__
+except ImportError:
+    __version__ = "Version number is not available"
 
 # import specific Classes from the modules to be accessible in the global
 # namespace

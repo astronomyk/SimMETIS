@@ -13,7 +13,6 @@
 #
 
 import os
-
 import glob
 import warnings
 import logging
@@ -23,6 +22,7 @@ import numpy as np
 
 from astropy.io import fits
 import astropy.units as u
+import astropy.table
 
 from . import psf as psf
 from . import spectral as sc
@@ -33,6 +33,7 @@ from .utils import __pkg_dir__, find_file
 
 
 __all__ = ["OpticalTrain", "get_filter_curve", "get_filter_set"]
+
 
 class OpticalTrain(object):
     """
@@ -53,7 +54,8 @@ class OpticalTrain(object):
 
     See Also
     --------
-    .commands.dump_defaults(), .commands.UserCommands
+    :class:`simmetis.commands.UserCommands`
+    :func:`simmetis.commands.dump_defaults`
 
 
     General Attributes
@@ -213,7 +215,7 @@ class OpticalTrain(object):
 
         See also
         --------
-        :class:`simmetis.spectral.TransmissionCurve`
+        :class:`simmetis.spectral.TransmissionCurve`,
         :func:`simmetis.optics.get_filter_set`
 
         """
@@ -349,13 +351,13 @@ class OpticalTrain(object):
 
         return n_ph_thermal, total_flux
 
-
     def _gen_all_tc(self):
 
-        ############## AO INSTRUMENT PHOTONS #########################
+        # ############# AO INSTRUMENT PHOTONS #########################
+        msg = "Generating AO module mirror emission photons"
         if self.cmds.verbose:
-            print("Generating AO module mirror emission photons")
-        logging.debug("[_gen_all_tc] Generating AO module mirror emission photons")
+            print(msg)
+        logging.debug("[gen_all_tc] "+msg)
 
         # get the total area of mirrors in the telescope
         # !!!!!! Bad practice, this is E-ELT specific hard-coding !!!!!!
@@ -385,7 +387,6 @@ class OpticalTrain(object):
             self.n_ph_ao = 0.
 
 
-
         ############## TELESCOPE PHOTONS #########################
         if self.cmds.verbose:
             print("Generating telescope mirror emission photons")
@@ -396,7 +397,6 @@ class OpticalTrain(object):
         mirr_list = self.cmds.mirrors_telescope
         scope_area = np.pi / 4 * np.sum(mirr_list["Outer"]**2 - \
                                         mirr_list["Inner"]**2)
-
 
         # Make the transmission curve for the blackbody photons from the mirror
         self.tc_mirror = self._gen_master_tc(preset="mirror")
@@ -452,7 +452,6 @@ class OpticalTrain(object):
                 ################################################################
                 # self.ec_atmo *= 2.5
                 ################################################################
-
 
                 self.ec_atmo = sc.get_sky_spectrum(
                     fname=self.cmds["ATMO_EC"],
@@ -535,7 +534,8 @@ class OpticalTrain(object):
                        ['INST_SURFACE_FACTOR'] + \
                        ['FPA_QE']
 
-                ao = ['INST_MIRROR_AO_TC'] + ['SCOPE_M1_TC'] * (len(self.cmds.mirrors_telescope) - 1)
+                ao = (['INST_MIRROR_AO_TC'] +
+                      ['SCOPE_M1_TC'] * (len(self.cmds.mirrors_telescope) -1))
 
                 if preset == "ao":
                     tc_keywords = base
@@ -568,7 +568,8 @@ class OpticalTrain(object):
                                                sc.BlackbodyCurve)):
                     tc_dict[key] = self.cmds[key]
                 else:
-                    airmass = self.cmds["ATMO_AIRMASS"] if key == "ATMO_TC" else None
+                    airmass = self.cmds["ATMO_AIRMASS"] \
+                        if key == "ATMO_TC" else None
                     tc_dict[key] = sc.TransmissionCurve(filename=self.cmds[key],
                                                         lam_res=self.lam_res,
                                                         airmass=airmass)
@@ -584,7 +585,6 @@ class OpticalTrain(object):
         self.tc_dict = tc_dict
 
         return tc_master
-
 
     def _gen_master_psf(self):
         """
@@ -617,8 +617,8 @@ class OpticalTrain(object):
             hdulist = fits.HDUList()
             for lam in self.cmds.lam_bin_centers:
 
-                psf_mo = psf.seeing_psf(fwhm   =self.cmds["OBS_SEEING"],
-                                        size   =self.cmds["SIM_PSF_SIZE"],
+                psf_mo = psf.seeing_psf(fwhm=self.cmds["OBS_SEEING"],
+                                        size=self.cmds["SIM_PSF_SIZE"],
                                         pix_res=self.cmds["SIM_DETECTOR_PIX_SCALE"],
                                         psf_type="moffat", filename=None)
 
@@ -639,11 +639,18 @@ class OpticalTrain(object):
             if os.path.exists(self.cmds["SCOPE_PSF_FILE"]):
                 #logging.debug("Using PSF: " + self.cmds["SCOPE_PSF_FILE"])
 
-                psf_m1 = psf.UserPSFCube(self.cmds["SCOPE_PSF_FILE"],
-                                         self.lam_bin_centers)
+                hdr = fits.getheader(self.cmds["SCOPE_PSF_FILE"], 0)
+                if "ETYPE" in hdr and hdr["ETYPE"] == "FVPSF":
+                    fname = self.cmds["SCOPE_PSF_FILE"]
+                    psf_m1 = psf.FieldVaryingPSF(filename=fname,
+                                                 **self.cmds.cmds)
 
-                if psf_m1[0].pix_res != self.pix_res:
-                    psf_m1.resample(self.pix_res)
+                else:
+                    psf_m1 = psf.UserPSFCube(self.cmds["SCOPE_PSF_FILE"],
+                                             self.lam_bin_centers)
+
+                    if psf_m1[0].pix_res != self.pix_res:
+                        psf_m1.resample(self.pix_res)
             else:
                 warnings.warn("""
                 Couldn't resolve SCOPE_PSF_FILE.
@@ -678,7 +685,6 @@ class OpticalTrain(object):
         return jitter_psf
 
 
-## note: 'filter' redefines a built-in and should not be used
 def get_filter_curve(filter_name):
     """
     Return a Vis/NIR broadband filter TransmissionCurve object
@@ -690,9 +696,17 @@ def get_filter_curve(filter_name):
     Notes
     -----
     Acceptable filters can be found be calling get_filter_set()
+
+    To access the values use TransmissionCurve.lam and TransmissionCurve.val
+
+    Examples
+    --------
+        >>> transmission_curve = get_filter_curve("TC_filter_Ks.dat")
+        >>> wavelength   = transmission_curve.lam
+        >>> transmission = transmission_curve.val
     """
 
-    fname = find_file(filter_name)
+    fname = find_file(filter_name, silent=True)
     if fname is None:
         fname = find_file("TC_filter_" + filter_name + ".dat")
         if fname is None:
@@ -710,3 +724,153 @@ def get_filter_set(path=None):
     lst = [i.replace(".dat", "").split("TC_filter_")[-1] \
                     for i in glob.glob(os.path.join(path, "TC_filter*.dat"))]
     return lst
+
+
+
+def plot_filter_set(path=None, filters="All", cmap="rainbow", filename=None,
+                    show=True):
+    """
+    Plot a filter transmision curve or transmision curve for a list of filters
+
+    Parameters
+    ----------
+    path : str
+        the location of the filters, set to None to use the default one, passed to get_filter_set
+    filters : str or list
+        a filter or a list of filters to be plotted, acceptable filters can be found calling
+        get_filter_set()
+    cmap : str
+        any matplotlib colormap, defaulted to rainbow
+    filename : str
+        a filename to save the figure if necessary
+    show : boolean
+        if True, the plot is shown immediately in an interactive session
+
+    Returns
+    -------
+    a matplotlib object
+
+    Notes
+    -----
+
+    Examples
+    --------
+
+        >>> plot_filter_set()
+        >>> plot_filter_set(cmap="viridis")
+        >>> plot_filter_set(filters="Ks")
+        >>> plot_filter_set(filters=("U","PaBeta","Ks"),savefig="filters.png")
+
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib import rcParams, cycler
+    from matplotlib.cm  import get_cmap
+
+    if np.size(filters) == 1:
+        filter_names = [filters,]
+    if  np.size(filters) > 1:
+        filter_names = filters
+
+    if filters == "All":
+        filter_names = get_filter_set(path)
+
+    cmap = get_cmap(cmap)
+    rcParams['axes.prop_cycle'] = \
+        cycler(color=cmap(np.linspace(0, 1, np.size(filter_names))))
+
+    peaks = np.zeros(np.size(filter_names))
+    i = 0
+    for filter_name in filter_names:
+
+        tcurve = get_filter_curve(filter_name)
+        wave = tcurve.lam[tcurve.val > 0.02]
+        tran = tcurve.val[tcurve.val > 0.02]
+
+        lam_peak = wave[tran == np.max(tran)]
+        peaks[i] = lam_peak[0]
+        i += 1
+
+    ordered_names = [x for _, x in sorted(zip(peaks, filter_names))]
+
+    for filter_name in ordered_names:
+        tcurve = get_filter_curve(filter_name)
+        wave = tcurve.lam[tcurve.val > 0.02]
+        tran = tcurve.val[tcurve.val > 0.02]
+        lmin = np.min(wave)
+        lmax = np.max(wave)
+        lam_peak = wave[tran == np.max(tran)]
+        if (lmax-lmin)/lam_peak[0] > 0.1:
+            plt.plot(wave, tran, "--", label=filter_name)
+        else:
+            plt.plot(wave, tran, "-", label=filter_name)
+
+    plt.xlabel(r"wavelength [$\mu$m]")
+    plt.ylabel("transmission")
+    lgd = plt.legend(loc=(1.03, 0))
+    if filename is not None:
+        plt.savefig(filename, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    if show:
+        plt.show()
+
+
+def get_filter_table(path=None, filters="all"):
+
+    """
+    Return an astropy.table for a list of filters
+
+    Parameters
+    ----------
+    path : str
+        the location of the filters, set to None to use the default one, passed to get_filter_set
+    filters : str or list
+        a filter or a list of filters to be plotted, acceptable filters can be found calling
+        get_filter_set()
+
+
+    Returns
+    -------
+    an astropy.table
+
+    Notes
+    -----
+
+    It will ONLY return values for filters that follow SimCADO format
+
+
+    Examples
+    --------
+
+    Obtaining table for a set of filters::
+
+        >>> table = sim.optics.get_filter_table(filters=["J", "Ks", "PaBeta",
+                                                         "U", "Br-gamma"])
+        >>> filter_centers = table["center"].data
+        >>> print(filter_centers)
+
+        [1.24794438 2.14487698 2.16986118]
+
+    Notice that only three values are printed as the U filter does not follow
+    (yet) the SimCADO format
+
+    """
+
+    #Obtaining format of the table
+    filter_table = get_filter_curve("Ks").filter_table()
+    filter_table.remove_row(0)
+
+    if np.size(filters) == 1:
+        filter_names = [filters,]
+    if np.size(filters) > 1:
+        filter_names = filters
+    if filters == "all":
+        filter_names = get_filter_set(path)
+
+    for name in filter_names:
+        try:
+            tcurve = get_filter_curve(name)
+            table = tcurve.filter_table()
+            filter_table.add_row(table[0])
+        except ValueError:
+            pass
+
+    return filter_table

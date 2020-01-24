@@ -685,17 +685,17 @@ class LMS:
 
     #############################################################################
 
-    def compute_snr(self, exptime=0., ndit=0,
+    def compute_snr(self, dit=0., ndit=0,
                     write_src_w_bg=None, write_background=None, plot=False):
         '''
         Compute SNR of the simulated observation (step 4 of the big plan)
         '''
         # TODO: give exptime as number (in sec) oder quantity (with user-given unit)
 
-        if exptime > 0.:
-            self.cmds["OBS_EXPTIME"] = exptime
+        if dit > 0.:
+            self.cmds["OBS_DIT"] = dit
         else:
-            exptime = self.cmds["OBS_EXPTIME"]
+            dit = self.cmds["OBS_DIT"]
 
         if ndit > 0:
             ndit = round(ndit)
@@ -780,11 +780,12 @@ class LMS:
         #dit = 80e3 * u.photon / np.max(ph_cube)
         #print("Peak", np.max(ph_cube), ", using DIT", dit)
 
-        dit = exptime * u.s / ndit
+#        dit = exptime * u.s / ndit
+        exptime = dit * ndit
         print("Exptime", exptime, "s, NDIT =", ndit, ", using DIT", dit)
 
-        ph_cube *= dit
-        bg_cube *= dit
+        ph_cube *= dit * u.s
+        bg_cube *= dit * u.s
 
         print("Peak in one DIT", np.max(ph_cube))
         sat = len(np.where(ph_cube.value > 100e3)[0])
@@ -819,7 +820,7 @@ class LMS:
 
         key = 'HIERARCH '+self.cmds.cmds.popitem(last=False)[0]
         header.set('EXPTIME', exptime, "[s] Total exposure time = DIT*NDIT", before=key)
-        header.set('DIT', dit.value, "[s] Detector integration time = EXPTIME/NDIT", before=key)
+        header.set('DIT', dit, "[s] Detector integration time = EXPTIME/NDIT", before=key)
         header.set('NDIT', ndit, "Number of integrations = EXPTIME/DIT", before=key)
         self.add_cmds_to_header(header)
 
@@ -888,14 +889,14 @@ class LMS:
 
     #############################################################################
 
-    def simulate(self, conditions, psf_name, exptime, ndit, plot=False):
+    def simulate(self, conditions, psf_name, dit, ndit, plot=False):
         '''run a LMS simulation'''
 
         self.transmission_emission(conditions=conditions, plot=plot)
         self.convolve_psf(psf_name, plot=plot)
         self.convolve_lsf(plot=plot)
         self.scale_to_detector()
-        return self.compute_snr(exptime=exptime, ndit=ndit, plot=plot)
+        return self.compute_snr(dit=dit, ndit=ndit, plot=plot)
 
 
 #############################################################################

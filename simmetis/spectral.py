@@ -63,6 +63,8 @@ from astropy import units as u
 from astropy import constants as c
 from astropy.io import fits
 from astropy.io import ascii as ioascii  # 'ascii' redefines built-in
+import astropy.table
+import yaml
 
 from .utils import find_file
 
@@ -137,11 +139,11 @@ class TransmissionCurve(object):
         self.lam = self.lam_orig
         self.val = self.val_orig
 
-        ## Resample to a default regular grid.
-        ## Not all of the filter curve .dat files have regular bin spacing and
-        ## so it is impossible to define a "lam_res" for those curves.
-        ## This is needed for the EmissionCurve method
-        ## "photons_in_range(lam_min, lam_max)"
+        # Resample to a default regular grid.
+        # Not all of the filter curve .dat files have regular bin spacing and
+        # so it is impossible to define a "lam_res" for those curves.
+        # This is needed for the EmissionCurve method
+        # "photons_in_range(lam_min, lam_max)"
         if self.params["Type"] == "Emission":
             self.resample(self.params["lam_res"], action="sum",
                           use_default_lam=self.params["use_default_lam"])
@@ -339,11 +341,110 @@ class TransmissionCurve(object):
             raise ValueError(errorstr.format(mode))
 
 
+    def plot(self, **kwargs):
+        """
+	Plot the transmission curve on the current axis
+
+        The method accepts matplotlib.pyplot keywords.
+        """
+        import matplotlib.pyplot as plt
+        plt.plot(self.lam, self.val, **kwargs)
+
+    def filter_info(self):
+        """
+        Returns the filter properties as a dictionary
+
+        Examples:
+        ---------
+        Creating a Table with fake values::
+
+            >>> meta_dict =  {"comments": {"author : me" , "source : me", "date : today", "status : ready","center : 0.0",  "width : 1.1"}}
+            >>> T = astropy.table.Table(data=[ [1.1,1.2,1.3], [0.1,0.2,0.3] ], names=("wavelength","transmission"), meta=meta_dict,copy=True)
+            >>> T.write("tmp_table.dat",format="ascii",fast_writer=False)
+
+        Reading the transmission curve::
+
+            >>> Tc = TransmissionCurve("tmp_table.dat")
+            >>> Tc.filter_info()
+
+            {'author': 'me',
+             'width': 1.1,
+             'status': 'ready',
+             'date': 'today',
+             'source': 'me',
+             'center': 0.0,
+             'filename': 'tmp_table.dat'}
+
+        Deleting the table::
+
+            >>> os.remove('tmp_table.dat')
+
+        """
+
+        tbl = astropy.table.Table.read(self.params["filename"],format="ascii",header_start=-1)
+
+        meta = tbl.meta
+
+        if not meta:
+            cmts_dict = {"comments": ""}
+
+        else:
+            cmts_list = meta["comments"]
+            cmts_str  = "\n".join(cmts_list)
+            cmts_dict = yaml.load(cmts_str)
+            if type(cmts_dict) is str:
+                cmts_dict={"comments":cmts_dict}
+
+        cmts_dict["filename"] = self.params["filename"]
+        return cmts_dict
+
+
+    def filter_table(self):
+        """
+        Returns the filter properties as a astropy.table
+
+        Notes
+        -----
+        ONLY works if filter files have the SimCADO header format
+
+        The following keywords should be in the header::
+
+            author
+            source
+            date_created
+            date_modified
+            status
+            type
+            center
+            width
+            blue_cutoff
+            red_cutoff
+
+        """
+        cmts_dict = self.filter_info()
+
+        filter_table = astropy.table.Table()
+        keys = [k for k in cmts_dict.keys()]
+
+        req_keys = ['filename', 'center', 'width', 'blue_cutoff', 'red_cutoff',
+                    'author', 'source', 'date_created', 'date_modified', 'status', 'type']
+
+        if np.all([k in req_keys for k in keys]):
+            for keyword in req_keys:
+                col = astropy.table.Column(name=keyword, data=(cmts_dict[keyword],))
+                filter_table.add_column(col)
+        else:
+            raise ValueError(self.params["filename"] + " is not a SimMETIS filter")
+        return filter_table
+
+
     def __len__(self):
         return len(self.val)
 
+
     def __getitem__(self, i):
         return self.val[i], self.lam[i]
+
 
     def __array__(self):
         return self.val

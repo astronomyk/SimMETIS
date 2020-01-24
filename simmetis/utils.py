@@ -18,7 +18,6 @@ Helper functions for SimMETIS
 #  parallactic_angle_2(ha, de, lat=-24.589167)
 #  moffat(r, alpha, beta)
 #
-#
 import os
 import sys
 import inspect
@@ -321,7 +320,7 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f.close()
 
 
-############# Check the server for data extras
+# ############ Check the server for data extras
 def download_file(url, save_dir=os.path.join(__pkg_dir__, "data")):
     """
     Download the extra data that aren't in the SimMETIS package
@@ -600,7 +599,8 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["simmetis", "astropy", "numpy", "scipy", "poppy", "wget"]
+    packages = ["simmetis", "astropy", "synphot", "numpy", "scipy",
+                "poppy", "wget"]
 
     # Check Python version
     print("Python:\n", sys.version)
@@ -625,7 +625,8 @@ def bug_report():
 
 
 def find_file(filename, path=None, silent=False):
-    '''Find a file in search path
+    """
+    Find a file in search path
 
     Parameters
     ----------
@@ -639,7 +640,8 @@ def find_file(filename, path=None, silent=False):
     Returns
     -------
     Absolute path of the file
-    '''
+    """
+
     import simmetis as sim
 
     if path is None:
@@ -696,3 +698,46 @@ def airmass2zendist(airmass):
     '''
 
     return np.rad2deg(np.arccos(1/airmass))
+
+
+def is_fits(filename):
+    """
+    Checks if file is a FITS file based on extension
+
+    Parameters
+    ----------
+    filename : str
+
+    Returns
+    -------
+    flag : bool
+
+    """
+    flag = False
+    if filename is not None:
+        if filename.split(".")[-1].lower() in "fits":
+            flag = True
+
+    return flag
+
+
+def quantify(item, unit):
+    """
+    Ensure an item is a Quantity
+
+    Parameters
+    ----------
+    item : int, float, array, list, Quantity
+    unit : str, Unit
+
+    Returns
+    -------
+    quant : Quantity
+
+    """
+
+    if isinstance(item, u.Quantity):
+        quant = item.to(u.Unit(unit))
+    else:
+        quant = item * u.Unit(unit)
+    return quant
