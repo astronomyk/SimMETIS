@@ -256,11 +256,11 @@ class Detector(object):
         self.oversample = self.cmds["SIM_OVERSAMPLING"]
         self.fpa_res = self.cmds["SIM_DETECTOR_PIX_SCALE"]
         self.dit = self.cmds["OBS_DIT"]
-        self.ndit    = self.cmds["OBS_NDIT"]
+        self.ndit = self.cmds["OBS_NDIT"]
         self.exptime = self.dit * self.ndit
-        self._n_ph_atmo   = 0
+        self._n_ph_atmo = 0
         self._n_ph_mirror = 0
-        self._n_ph_ao     = 0
+        self._n_ph_ao = 0
         self.array = None        # defined in method
 
 
@@ -309,6 +309,11 @@ class Detector(object):
 
         #removed kwargs
         self.cmds.update(kwargs)
+
+        # repopulate these parameters in case they were updated
+        self.dit = self.cmds["OBS_DIT"]
+        self.ndit = self.cmds["OBS_NDIT"]
+        self.exptime = self.dit * self.ndit
 
         if filename is not None:
             to_disk = True
@@ -366,7 +371,8 @@ class Detector(object):
             ######
             print("Reading out chip", self.chips[i].id, "using",
                   read_out_type)
-            print("DIT =", self.dit, "   NDIT =", self.ndit)
+            print("DIT =", self.cmds["OBS_DIT"],
+                  "   NDIT =", self.cmds["OBS_NDIT"])
 
             array = self.chips[i].read_out(self.cmds,
                                            read_out_type=read_out_type)
@@ -998,21 +1004,30 @@ class Chip(object):
         # exposure
         image2 = image * dit
 
-        # Check for windows systems. np.poisson is limited to 32-bit
-        if os.name == "nt":
-            image2[image2 > 2.147E9] = 2.147E9      # 2**31 = 2147483648
+        #
+        ## Check for windows systems. np.poisson is limited to 32-bit
+        #if os.name == "nt":
+        #    image2[image2 > 2.147E9] = 2.147E9      # 2**31 = 2147483648
 
         # Each DIT is read out individually. This helps prevent overflows
         # due to too large expected photon numbers, at the expense of increased
         # execution time.
         im_st = np.zeros(np.shape(image))
+
+        # We use Poisson sampling for small expected fluxes, and Poisson-Gauss
+        # sampling for larger fluxes. The limit, 1e7, is somewhat arbitrary
+        # but stays clear of the windows 32 bit limit
+        if np.median(image2) > 1e7:
+            sampler = lambda img: np.random.normal(img, np.sqrt(img))
+        else:
+            sampler = np.random.poisson
+
         for _ in range(ndit):
-            im_st += np.random.poisson(image2)
+            im_st += sampler(image2)
 
         # Return the average image, corresponding to one DIT
         im_st /= ndit
         return im_st.astype(np.float32)
-
 
     def _read_noise_frame(self, cmds, n_frames=1):
         """
