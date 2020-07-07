@@ -3,8 +3,8 @@
   - atmospheric transmission + emission
   - thermal emission of the telescope (global emissivity or detailed model of telescope pupil?)
   - the whole optical train of the instrument (radiometric treatment of all transmissive + reflective elements + instrumental PSF)
-  - dispersion effects (atmosphere + fixed ADCs)
-		\item diffraction effects in the instrument (spectroscopic modes)
+  - dispersion effects (atmosphere + fixed ADC)
+  - diffraction effects in the instrument (spectroscopic modes)
   - detector noise and QE
   - FITS file generation
   - convenience functions to output individual frames, half-cycle averaged unchopped images, chopped and nodded images
