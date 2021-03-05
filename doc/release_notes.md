@@ -1,3 +1,8 @@
+# 0.3 (March 2021)
+- now use DIT/NDIT instead of EXPTIME
+- prevent numerical overflow due to high background rates 
+- updated notebooks (Geosnap for N-band, example using an image as a source)
+
 # 0.2 (December 2018)
 
 - added LMS module, including an example notebook, configuration file and test data
