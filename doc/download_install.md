@@ -44,6 +44,7 @@ SimMETIS is configured to run as-is. It has the following directories:
   - notebooks -- contains a few example notebooks that should help for a quick start with the simulations
   - simmetis -- contains the actual simulator codebase (which is described on the SimCADO webpages)
   - test -- contains several scripts to verify that the outputs of SimMETIS agree with our back-of-the envelope calculations.
-
+  - test_data -- test data used in the notebooks
+  - 
 ## Developer installation
 Alternatively, you can clone our github repository and run pip install in your local directory.
