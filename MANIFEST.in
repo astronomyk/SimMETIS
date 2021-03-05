@@ -3,3 +3,4 @@ include data/*
 include doc/*
 include simmetis/tests/*
 include test/*
+include test_data/*
