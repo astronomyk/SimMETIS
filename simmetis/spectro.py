@@ -316,7 +316,8 @@ class LMS:
         #
         self.transmission = np.interp(self.wavelen, skylam, skytran) # dimensionless, [0...1]
 
-        sky_emission = np.interp(det_wavelen, skylam, skyemis) * (self.det_pixscale/1000.)**2
+        sky_emission = (np.interp(det_wavelen.value, skylam, skyemis)
+                        * (self.det_pixscale/1000.)**2)
         # emission in data file is photons/s/um/m^2/arcsec2, convert to photons/s/um/m^2
 
         if plot:
@@ -893,7 +894,7 @@ class LMS:
                        * u.m/u.s).to(u.um, equivalencies=u.doppler_optical(self.restcoo))
 
         # interpolate transmission onto wavelength-grid of detector:
-        trans = np.interp(det_wavelen, self.wavelen, self.transmission)
+        trans = np.interp(det_wavelen.value, self.wavelen, self.transmission)
 
         data /= trans[:, np.newaxis, np.newaxis]
 
